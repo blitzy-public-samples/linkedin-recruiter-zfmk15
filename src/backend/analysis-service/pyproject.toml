@@ -1,0 +1,67 @@
+[tool.poetry]
+name = "analysis-service"
+version = "1.0.0"
+description = "LinkedIn Profile Analysis Service using Claude AI"
+authors = ["LinkedIn Search Team"]
+readme = "README.md"
+packages = [
+    { include = "src", from = "." }
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.100.0"  # High-performance web framework
+uvicorn = "^0.23.0"  # ASGI server implementation
+pydantic = "^2.0.0"  # Data validation and settings management
+anthropic = "^0.3.0"  # Claude AI SDK for profile analysis
+numpy = "^1.24.0"  # Numerical computing and data processing
+pandas = "^2.0.0"  # Data manipulation and analysis
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}  # JWT token handling
+python-multipart = "^0.0.6"  # Form data handling
+httpx = "^0.24.0"  # Async HTTP client
+redis = {extras = ["hiredis"], version = "^4.6.0"}  # High-performance caching
+prometheus-client = "^0.17.0"  # Production metrics collection
+structlog = {extras = ["rich"], version = "^23.1.0"}  # Enterprise-grade logging
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"  # Testing framework
+pytest-asyncio = "^0.21.0"  # Async test support
+pytest-cov = "^4.1.0"  # Test coverage reporting
+black = "^23.7.0"  # Code formatting
+isort = "^5.12.0"  # Import sorting
+flake8 = "^6.1.0"  # Code linting
+mypy = "^1.4.0"  # Static type checking
+
+[build-system]
+requires = ["poetry-core>=1.6.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+addopts = "--cov=src --cov-report=xml --cov-report=term-missing -v"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = "\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203"]
+max-complexity = 10
