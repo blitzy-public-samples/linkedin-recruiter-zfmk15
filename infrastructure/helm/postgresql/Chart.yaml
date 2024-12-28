@@ -1,0 +1,48 @@
+apiVersion: v2
+type: application
+name: postgresql
+description: High-availability PostgreSQL database deployment for LinkedIn Profile Search and Analysis System with multi-AZ replication, automated backups, and performance optimization
+version: 1.0.0
+appVersion: "15.4.0"
+kubeVersion: ">=1.27.0-0"
+
+keywords:
+  - postgresql
+  - database
+  - sql
+  - replication
+  - linkedin-search
+  - high-availability
+  - encrypted-storage
+  - multi-az
+
+home: https://github.com/your-org/linkedin-profile-search
+sources:
+  - https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+  - https://github.com/your-org/linkedin-profile-search/tree/main/infrastructure/helm/postgresql
+
+maintainers:
+  - name: Platform Team
+    email: platform@your-org.com
+    url: https://github.com/your-org/linkedin-profile-search
+
+dependencies:
+  - name: postgresql
+    version: 12.5.8
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+    tags:
+      - database
+      - postgresql
+      - high-availability
+
+annotations:
+  artifacthub.io/changes: "Initial release of PostgreSQL chart with HA configuration"
+  artifacthub.io/containsSecurityUpdates: "true"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/license: "Apache-2.0"
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9187"
+  backup.velero.io/backup-volumes: "data"
+  meta.helm.sh/release-name: "postgresql"
+  security.cloud.google.com/approved: "true"
