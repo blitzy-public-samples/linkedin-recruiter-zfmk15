@@ -1,0 +1,68 @@
+* @tech-leads
+
+# API Gateway service ownership with mandatory security review
+src/backend/api-gateway/** @backend-team @api-team @security-team
+
+# Analysis service with Claude AI integration and data security requirements
+src/backend/analysis-service/** @data-science-team @backend-team @security-team
+
+# LinkedIn search service ownership with data protection requirements
+src/backend/search-service/** @search-team @backend-team @security-team
+
+# Data persistence service ownership with enhanced security measures
+src/backend/data-service/** @data-team @backend-team @security-team
+
+# Web application ownership with security review for client-side security
+src/web/** @frontend-team @security-team
+
+# Infrastructure and deployment configuration with security oversight
+infrastructure/** @devops-team @platform-team @security-team
+
+# CI/CD workflow configuration ownership with security validation
+.github/workflows/** @devops-team @platform-team @security-team
+
+# Configuration file ownership with security review
+**/*config*.{ts,js,json,yaml,yml} @platform-team @security-team
+
+# Security-related code ownership
+**/security*.{ts,js,java,py} @security-team
+
+# Authentication and authorization code ownership
+**/auth*.{ts,js,java,py} @security-team
+
+# Data encryption implementation ownership
+**/encryption*.{ts,js,java,py} @security-team
+
+# Data protection and privacy code ownership
+**/data-protection*.{ts,js,java,py} @security-team @data-team
+
+# Ensure security review for sensitive data handling
+src/backend/data-service/**/*.{ts,js,java,py} @security-team @data-team
+
+# Infrastructure as Code and deployment configurations
+infrastructure/terraform/** @devops-team @platform-team @security-team
+infrastructure/kubernetes/** @devops-team @platform-team @security-team
+infrastructure/docker/** @devops-team @platform-team @security-team
+
+# CI/CD pipeline configurations
+.github/workflows/api-gateway.yml @devops-team @platform-team @security-team
+.github/workflows/analysis-service.yml @devops-team @platform-team @security-team
+.github/workflows/search-service.yml @devops-team @platform-team @security-team
+.github/workflows/data-service.yml @devops-team @platform-team @security-team
+.github/workflows/web.yml @devops-team @platform-team @security-team
+
+# Documentation ownership
+docs/** @tech-leads @platform-team
+
+# Test configurations and test infrastructure
+tests/e2e/** @devops-team @platform-team
+tests/security/** @security-team
+tests/performance/** @platform-team
+
+# Database schema and migration scripts
+src/backend/data-service/migrations/** @data-team @security-team
+src/backend/data-service/schema/** @data-team @security-team
+
+# API specifications and contracts
+src/backend/api-gateway/specs/** @api-team @backend-team
+src/backend/*/api/** @api-team @backend-team
