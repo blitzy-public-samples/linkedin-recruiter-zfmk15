@@ -1,0 +1,111 @@
+{
+  "common": {
+    "buttons": {
+      "search": "Buscar",
+      "clear": "Limpiar",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "export": "Exportar",
+      "view": "Ver Detalles",
+      "back": "Atrás",
+      "next": "Siguiente",
+      "previous": "Anterior"
+    },
+    "labels": {
+      "loading": "Cargando...",
+      "error": "Error",
+      "success": "Éxito",
+      "warning": "Advertencia",
+      "required": "Obligatorio",
+      "optional": "Opcional"
+    },
+    "navigation": {
+      "dashboard": "Panel",
+      "search": "Búsqueda",
+      "profiles": "Perfiles",
+      "analytics": "Análisis",
+      "settings": "Configuración"
+    },
+    "errors": {
+      "required": "Este campo es obligatorio",
+      "invalid": "Entrada inválida",
+      "serverError": "Se produjo un error del servidor",
+      "networkError": "Se produjo un error de red"
+    }
+  },
+  "search": {
+    "form": {
+      "keywords": "Palabras clave",
+      "keywordsPlaceholder": "Ingrese palabras clave de búsqueda...",
+      "location": "Ubicación",
+      "locationPlaceholder": "Ingrese ubicación...",
+      "experience": "Experiencia",
+      "experienceYears": "Años de Experiencia",
+      "skills": "Habilidades",
+      "skillsPlaceholder": "Agregar habilidades...",
+      "requiredSkills": "Habilidades Requeridas",
+      "optionalSkills": "Habilidades Deseables",
+      "addSkill": "Agregar Habilidad",
+      "removeSkill": "Eliminar Habilidad"
+    },
+    "results": {
+      "found": "{{count}} perfiles encontrados",
+      "noResults": "No se encontraron perfiles",
+      "sortBy": "Ordenar por",
+      "relevance": "Relevancia",
+      "recentlyUpdated": "Actualizado Recientemente",
+      "matchScore": "Puntuación de Coincidencia"
+    },
+    "filters": {
+      "title": "Filtros",
+      "clear": "Limpiar Filtros",
+      "apply": "Aplicar Filtros"
+    }
+  },
+  "profile": {
+    "details": {
+      "experience": "Experiencia",
+      "education": "Educación",
+      "skills": "Habilidades",
+      "certifications": "Certificaciones",
+      "present": "Presente",
+      "years": "{{count}} años",
+      "months": "{{count}} meses",
+      "matchScore": "Puntuación de Coincidencia",
+      "analysis": "Análisis del Perfil",
+      "topMatch": "Indicadores de Mejor Coincidencia",
+      "skillMatch": "Coincidencia de Habilidades",
+      "experienceMatch": "Coincidencia de Experiencia",
+      "industryMatch": "Coincidencia de Industria"
+    },
+    "actions": {
+      "contact": "Contactar",
+      "save": "Guardar Perfil",
+      "share": "Compartir Perfil",
+      "export": "Exportar Perfil",
+      "generateReport": "Generar Informe"
+    }
+  },
+  "analytics": {
+    "metrics": {
+      "totalSearches": "Búsquedas Totales",
+      "profilesFound": "Perfiles Encontrados",
+      "averageMatch": "Puntuación Media de Coincidencia",
+      "topSearchTerms": "Términos de Búsqueda Principales"
+    },
+    "charts": {
+      "searchPerformance": "Rendimiento de Búsqueda",
+      "matchDistribution": "Distribución de Puntuaciones",
+      "skillsDistribution": "Distribución de Habilidades"
+    },
+    "filters": {
+      "dateRange": "Rango de Fechas",
+      "lastWeek": "Última Semana",
+      "lastMonth": "Último Mes",
+      "lastQuarter": "Último Trimestre",
+      "custom": "Rango Personalizado"
+    }
+  }
+}
