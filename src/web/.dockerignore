@@ -1,0 +1,91 @@
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist
+build
+.cache
+*.tsbuildinfo
+
+# Development artifacts
+coverage
+tests
+**/*.test.ts
+**/*.test.tsx
+**/__tests__
+**/__mocks__
+jest.config.*
+
+# IDE and Editor files
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Version Control
+.git
+.gitignore
+.gitattributes
+
+# Configuration files
+.env*
+.env.local
+.env.development
+.env.test
+.env.production
+.eslintrc*
+.prettierrc*
+.editorconfig
+tsconfig.json
+babel.config.js
+postcss.config.js
+webpack.config.js
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+docs
+*.md
+
+# Docker files
+.dockerignore
+Dockerfile*
+
+# Temporary files
+*.log
+*.tmp
+.tmp
+tmp
+
+# Debug files
+debug.log
+npm-debug.log*
+
+# Misc development files
+.husky
+.storybook
+storybook-static
+cypress
+e2e
+*.stories.tsx
+*.stories.ts
+
+# Assets source files (only needed during development)
+**/*.sketch
+**/*.fig
+**/*.xd
+**/*.psd
+
+# Development scripts
+scripts
+config
+
+# Type definitions not needed in production
+@types
+*.d.ts
