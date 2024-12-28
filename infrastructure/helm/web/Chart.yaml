@@ -1,0 +1,46 @@
+# Helm chart version 3.12+
+apiVersion: v2
+
+# Metadata
+name: linkedin-profile-search-web
+version: 1.0.0
+description: Helm chart for deploying the LinkedIn Profile Search web frontend application
+type: application
+appVersion: 1.0.0
+
+# Keywords for chart search and categorization
+keywords:
+  - web
+  - frontend
+  - react
+  - linkedin
+  - profile-search
+
+# Chart maintainers
+maintainers:
+  - name: DevOps Team
+    email: devops@linkedin-search.com
+
+# Chart dependencies
+dependencies:
+  - name: ingress-nginx
+    version: 4.7.1
+    repository: https://kubernetes.github.io/ingress-nginx
+    condition: ingress.enabled
+
+# Additional annotations
+annotations:
+  category: Application
+  licenses: Apache-2.0
+  support: https://linkedin-search.com/support
+
+# Home URL and documentation
+home: https://linkedin-search.com
+sources:
+  - https://github.com/linkedin-search/web-frontend
+
+# Minimum Kubernetes version required
+kubeVersion: ">=1.24.0"
+
+# Icon URL for the chart
+icon: https://linkedin-search.com/icon.png
