@@ -1,0 +1,51 @@
+# Helm chart version 2 API
+apiVersion: v2
+# Specifies this is an application chart
+type: application
+
+# Chart name and basic details
+name: mongodb
+version: 1.0.0
+appVersion: "6.0.0"
+description: MongoDB Helm chart for LinkedIn Profile Search and Analysis System with support for sharded clusters, high availability, and multi-AZ deployment
+
+# Keywords for chart discovery and categorization
+keywords:
+  - mongodb
+  - database
+  - nosql
+  - replicaset
+  - sharding
+  - high-availability
+  - profile-storage
+
+# Chart maintainer information
+maintainers:
+  - name: DevOps Team
+    email: devops@company.com
+
+# Additional metadata annotations
+annotations:
+  category: Database
+  deploymentType: statefulset
+  highAvailability: "true"
+  multiAZ: "true"
+  sharding: "enabled"
+
+# Chart source information
+home: https://github.com/company/linkedin-profile-search
+sources:
+  - https://github.com/company/linkedin-profile-search/infrastructure/helm/mongodb
+
+# Minimum Kubernetes version required
+kubeVersion: ">=1.21.0"
+
+# Icon for the chart (optional)
+icon: https://raw.githubusercontent.com/mongodb/mongo/master/docs/leaf.svg
+
+# Additional chart metadata
+deprecated: false
+tillerVersion: ">=3.0.0"
+
+# Dependencies (none required as this is a standalone MongoDB deployment)
+dependencies: []
