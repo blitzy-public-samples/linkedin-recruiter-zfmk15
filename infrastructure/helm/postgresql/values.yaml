@@ -1,0 +1,213 @@
+# PostgreSQL Helm Chart Values
+# Version: 1.0.0
+# Base Chart: bitnami/postgresql@12.5.8
+
+# Global settings
+global:
+  postgresql:
+    auth:
+      existingSecret: postgresql-credentials
+    serviceAccount:
+      create: true
+      annotations:
+        eks.amazonaws.com/role-arn: "arn:aws:iam::123456789:role/postgresql-role"
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: bitnami/postgresql
+  tag: 15.4.0-debian-11-r0
+  pullPolicy: IfNotPresent
+  pullSecrets:
+    - regcred
+
+# Deployment architecture
+architecture:
+  type: replication
+  replicaCount: 2
+  podAntiAffinityPreset: hard
+  nodeAffinityPreset:
+    type: hard
+    key: kubernetes.io/role
+    values:
+      - database
+
+# Authentication and security
+auth:
+  postgresPassword: ""  # Set via existingSecret
+  replicationPassword: ""  # Set via existingSecret
+  existingSecret: postgresql-credentials
+  usePasswordFile: true
+  enableTLS: true
+  certificatesSecret: postgresql-certs
+  tlsCAFile: ca.crt
+  tlsCertFile: tls.crt
+  tlsKeyFile: tls.key
+
+# Primary instance configuration
+primary:
+  name: primary
+  resources:
+    requests:
+      memory: 4Gi
+      cpu: 2
+    limits:
+      memory: 8Gi
+      cpu: 4
+  podSecurityContext:
+    fsGroup: 1001
+    runAsUser: 1001
+    runAsNonRoot: true
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  extraEnvVars:
+    - name: POSTGRESQL_AUDIT_LOGGING
+      value: "on"
+    - name: POSTGRESQL_LOG_CONNECTIONS
+      value: "on"
+    - name: POSTGRESQL_MAX_CONNECTIONS
+      value: "1000"
+    - name: POSTGRESQL_SHARED_BUFFERS
+      value: "2GB"
+    - name: POSTGRESQL_EFFECTIVE_CACHE_SIZE
+      value: "6GB"
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+          topologyKey: kubernetes.io/hostname
+
+# Read replica configuration
+readReplicas:
+  replicaCount: 2
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: 1
+    limits:
+      memory: 4Gi
+      cpu: 2
+  podAntiAffinity: hard
+  extraEnvVars:
+    - name: POSTGRESQL_SYNCHRONOUS_COMMIT
+      value: "on"
+    - name: POSTGRESQL_MAX_CONNECTIONS
+      value: "500"
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+          topologyKey: kubernetes.io/hostname
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClass: gp3
+  size: 100Gi
+  annotations:
+    backup.velero.io/backup-volumes: data
+  mountPath: /bitnami/postgresql
+  subPath: ""
+  accessModes:
+    - ReadWriteOnce
+
+# Network policies
+networkPolicy:
+  enabled: true
+  allowExternal: false
+  ingressRules:
+    - namespaceSelector:
+        matchLabels:
+          name: linkedin-search
+
+# Metrics and monitoring
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+    namespace: monitoring
+  prometheusRule:
+    enabled: true
+    namespace: monitoring
+    rules:
+      - alert: PostgreSQLHighConnectionCount
+        expr: pg_stat_activity_count > 100
+        for: 5m
+        severity: warning
+      - alert: PostgreSQLHighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        severity: warning
+      - alert: PostgreSQLHighMemoryUsage
+        expr: process_resident_memory_bytes / container_memory_limit_bytes > 0.8
+        for: 5m
+        severity: warning
+
+# Backup configuration
+backup:
+  enabled: true
+  cronjob:
+    schedule: "0 0 * * *"
+    retention: 7d
+    storageClass: gp3
+    destination: s3://linkedin-search-backups
+    encryption:
+      enabled: true
+      secretName: backup-encryption-key
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 5432
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+
+# Update strategy
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# Lifecycle hooks
+lifecycle:
+  preStop:
+    exec:
+      command:
+        - /bin/sh
+        - -c
+        - pg_ctl stop -m smart
+
+# Pod disruption budget
+pdb:
+  create: true
+  minAvailable: 1
+
+# Health checks
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
