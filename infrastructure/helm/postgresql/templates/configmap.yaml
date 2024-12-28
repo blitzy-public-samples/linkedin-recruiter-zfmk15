@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-postgresql-config
+  labels:
+    {{- include "postgresql.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+  annotations:
+    helm.sh/hook: "pre-install,pre-upgrade"
+    helm.sh/hook-weight: "-5"
+    # Add checksum annotation to trigger pod restart when config changes
+    checksum/config: {{ include (print $.Template.BasePath "/values.yaml") . | sha256sum }}
+
+data:
+  postgresql.conf: |
+    # Connection Settings
+    max_connections = {{ .Values.primary.extraEnvVars | default 1000 }}
+    superuser_reserved_connections = 3
+    
+    # Memory Settings
+    shared_buffers = {{ .Values.primary.extraEnvVars.POSTGRESQL_SHARED_BUFFERS | default "2GB" }}
+    effective_cache_size = {{ .Values.primary.extraEnvVars.POSTGRESQL_EFFECTIVE_CACHE_SIZE | default "6GB" }}
+    maintenance_work_mem = 2GB
+    work_mem = 8MB
+    huge_pages = try
+    
+    # Disk Settings
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    checkpoint_completion_target = 0.9
+    min_wal_size = 2GB
+    max_wal_size = 8GB
+    wal_buffers = 16MB
+    wal_compression = on
+    
+    # Parallel Query Settings
+    max_worker_processes = {{ .Values.primary.maxWorkerProcesses | default 8 }}
+    max_parallel_workers_per_gather = {{ .Values.primary.maxParallelWorkersPerGather | default 4 }}
+    max_parallel_workers = {{ .Values.primary.maxParallelWorkers | default 8 }}
+    max_parallel_maintenance_workers = {{ .Values.primary.maxParallelMaintenanceWorkers | default 4 }}
+    
+    # Replication Settings
+    wal_level = replica
+    hot_standby = on
+    synchronous_commit = on
+    full_page_writes = on
+    
+    # Archiving Settings
+    archive_mode = on
+    archive_command = '{{ .Values.primary.archiveCommand | default "test ! -f /archive/%f && cp %p /archive/%f" }}'
+    archive_timeout = 60
+    
+    # Query Planning
+    default_statistics_target = 1000
+    constraint_exclusion = partition
+    
+    # Autovacuum Settings
+    autovacuum = on
+    autovacuum_max_workers = {{ .Values.primary.autovacuumMaxWorkers | default 4 }}
+    autovacuum_naptime = 1min
+    autovacuum_vacuum_threshold = 50
+    autovacuum_vacuum_scale_factor = 0.05
+    autovacuum_analyze_threshold = 50
+    autovacuum_analyze_scale_factor = 0.025
+    
+    # Logging Settings
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_rotation_age = 1d
+    log_rotation_size = 100MB
+    log_min_duration_statement = 1000
+    log_checkpoints = on
+    log_connections = {{ .Values.primary.extraEnvVars.POSTGRESQL_LOG_CONNECTIONS | default "on" }}
+    log_disconnections = on
+    log_lock_waits = on
+    log_temp_files = 0
+    log_autovacuum_min_duration = 0
+    log_error_verbosity = default
+    
+    # Monitoring Settings
+    track_activities = on
+    track_counts = on
+    track_io_timing = on
+    track_functions = all
+    track_activity_query_size = 2048
+
+  pg_hba.conf: |
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    
+    # Database administrative login by Unix domain socket
+    local   all             postgres                                peer
+    
+    # "local" is for Unix domain socket connections only
+    local   all             all                                     peer
+    
+    # Replication connections by IP address
+    hostssl replication     replication     all                     scram-sha-256
+    
+    # IPv4 local connections
+    hostssl all             all             127.0.0.1/32           scram-sha-256
+    
+    # IPv6 local connections
+    hostssl all             all             ::1/128                scram-sha-256
+    
+    # Allow all authenticated connections from within the cluster
+    hostssl all             all             all                     scram-sha-256
+    
+    # Allow monitoring user for metrics collection
+    hostssl all             monitoring      all                     scram-sha-256
