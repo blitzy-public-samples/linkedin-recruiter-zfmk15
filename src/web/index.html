@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <!-- Theme configuration -->
+    <meta name="theme-color" content="#1976D2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    
+    <!-- SEO meta tags -->
+    <meta name="description" content="AI-powered LinkedIn profile search and analysis system for recruiters with intelligent candidate assessment" />
+    
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    
+    <!-- Material Design fonts with performance optimization -->
+    <link 
+      rel="stylesheet" 
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <link 
+      rel="stylesheet" 
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      media="print"
+      onload="this.media='all'"
+    />
+    
+    <!-- PWA and favicon configuration -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Fallback for font loading -->
+    <noscript>
+      <link 
+        rel="stylesheet" 
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      />
+      <link 
+        rel="stylesheet" 
+        href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      />
+    </noscript>
+
+    <title>LinkedIn Profile Search & Analysis</title>
+  </head>
+  <body>
+    <!-- React mount point with accessibility attributes -->
+    <main id="root" role="main" aria-label="LinkedIn Profile Search Application"></main>
+    
+    <!-- JavaScript disabled warning -->
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        You need to enable JavaScript to run this application. This application requires JavaScript for essential functionality including profile search and analysis.
+      </div>
+    </noscript>
+
+    <!-- Entry point script -->
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>
