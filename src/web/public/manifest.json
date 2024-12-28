@@ -1,0 +1,82 @@
+{
+  "name": "LinkedIn Profile Search & Analysis",
+  "short_name": "Profile Search",
+  "description": "AI-powered LinkedIn profile search and analysis system for recruiters",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1976D2",
+  "orientation": "any",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/search.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Search Interface"
+    },
+    {
+      "src": "/screenshots/analysis.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Profile Analysis"
+    }
+  ],
+  "categories": [
+    "business",
+    "productivity",
+    "utilities"
+  ],
+  "shortcuts": [
+    {
+      "name": "New Search",
+      "url": "/search/new",
+      "description": "Start a new profile search"
+    },
+    {
+      "name": "Analytics",
+      "url": "/analytics",
+      "description": "View search analytics"
+    }
+  ],
+  "related_applications": [],
+  "dir": "ltr",
+  "lang": "en",
+  "display_override": [
+    "standalone",
+    "browser"
+  ],
+  "iarc_rating_id": "",
+  "protocol_handlers": [
+    {
+      "protocol": "web+profilesearch",
+      "url": "/search?q=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
