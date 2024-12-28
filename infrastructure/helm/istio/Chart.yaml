@@ -1,0 +1,32 @@
+apiVersion: v2
+name: istio
+version: 1.0.0
+description: Istio service mesh deployment for LinkedIn Profile Search and Analysis System
+type: application
+appVersion: 1.20.0
+
+# Dependencies for core Istio components
+dependencies:
+  - name: istio-base
+    version: 1.20.0
+    repository: https://istio-release.storage.googleapis.com/charts
+    condition: istio-base.enabled
+  - name: istiod
+    version: 1.20.0
+    repository: https://istio-release.storage.googleapis.com/charts
+    condition: istiod.enabled
+
+# Additional metadata
+keywords:
+  - istio
+  - service-mesh
+  - microservices
+  - security
+  - monitoring
+
+maintainers:
+  - name: Platform Team
+    email: platform@linkedin-search.com
+
+# Template engine
+engine: gotpl
