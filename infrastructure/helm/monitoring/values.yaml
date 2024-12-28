@@ -1,0 +1,161 @@
+# Production-grade Helm values for LinkedIn Profile Search monitoring stack
+# Version: 1.0.0
+# Components: Prometheus v2.45.0, Grafana v9.5.0, AlertManager v0.25.0
+
+prometheus:
+  enabled: true
+  replicaCount: 3  # High availability with 3 replicas
+  
+  image:
+    repository: prom/prometheus  # v2.45.0
+    tag: v2.45.0
+    pullPolicy: IfNotPresent
+
+  # Ensure pods are distributed across nodes
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - topologyKey: kubernetes.io/hostname
+
+  # Production-grade resource allocation
+  resources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "2"
+      memory: 4Gi
+
+  # Data retention and persistence configuration
+  retention: 30d
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: gp3
+    retainPolicy: Retain
+
+  # ServiceMonitor configuration for metrics collection
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 25s
+    endpoints:
+      - port: http
+        path: /metrics
+        interval: 30s
+
+  # Alerting rules configuration
+  rules:
+    alerting:
+      groups:
+        - name: infrastructure
+          rules:
+            - alert: HighCPUUsage
+              expr: avg(rate(container_cpu_usage_seconds_total[5m])) by (pod) > 0.8
+              for: 5m
+              severity: warning
+
+grafana:
+  enabled: true
+  replicaCount: 2  # High availability with 2 replicas
+
+  image:
+    repository: grafana/grafana  # v9.5.0
+    tag: 9.5.0
+    pullPolicy: IfNotPresent
+
+  # Ensure pods are distributed across nodes
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - topologyKey: kubernetes.io/hostname
+
+  # Production-grade resource allocation
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+  # Persistence configuration
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: gp3
+
+  # Grafana configuration
+  config:
+    security:
+      adminPassword: ${GRAFANA_ADMIN_PASSWORD}
+      secretKey: ${GRAFANA_SECRET_KEY}
+    
+    # Data source configuration
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server
+        access: proxy
+        isDefault: true
+
+    # Dashboard configuration
+    dashboards:
+      - name: linkedin-system
+        folder: LinkedIn System
+        type: json
+        path: /etc/grafana/dashboards
+
+alertmanager:
+  enabled: true
+  replicaCount: 2  # High availability with 2 replicas
+
+  image:
+    repository: prom/alertmanager  # v0.25.0
+    tag: v0.25.0
+    pullPolicy: IfNotPresent
+
+  # Ensure pods are distributed across nodes
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - topologyKey: kubernetes.io/hostname
+
+  # Production-grade resource allocation
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+  # Persistence configuration
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: gp3
+
+  # AlertManager configuration
+  config:
+    global:
+      resolve_timeout: 5m
+      slack_api_url: ${SLACK_WEBHOOK_URL}
+
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: slack-notifications
+
+    receivers:
+      - name: slack-notifications
+        slack_configs:
+          - channel: '#alerts'
+            send_resolved: true
+
+    # Inhibition rules to prevent alert spam
+    inhibit_rules:
+      - source_match:
+          severity: critical
+        target_match:
+          severity: warning
+        equal: ['alertname', 'cluster', 'service']
