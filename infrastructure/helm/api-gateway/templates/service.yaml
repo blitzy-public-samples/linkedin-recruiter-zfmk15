@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "api-gateway.fullname" . }}
+  labels:
+    {{- include "api-gateway.labels" . | nindent 4 }}
+  annotations:
+    # Prometheus monitoring annotations
+    prometheus.io/scrape: "{{ .Values.monitoring.enabled | default "true" }}"
+    prometheus.io/port: "{{ .Values.monitoring.port | default "9090" }}"
+    prometheus.io/path: "{{ .Values.monitoring.path | default "/metrics" }}"
+    
+    # AWS Load Balancer annotations for enhanced networking
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "10"
+    
+    # Istio service mesh annotations
+    sidecar.istio.io/inject: "{{ .Values.istio.enabled | default "true" }}"
+    traffic.sidecar.istio.io/includeInboundPorts: "{{ .Values.service.port }}"
+    traffic.sidecar.istio.io/excludeOutboundPorts: "{{ .Values.istio.excludePorts | default "" }}"
+    
+    {{- if .Values.service.annotations }}
+    {{- toYaml .Values.service.annotations | nindent 4 }}
+    {{- end }}
+
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    # Main application port
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+      
+    # Prometheus metrics port
+    - port: {{ .Values.monitoring.port | default 9090 }}
+      targetPort: {{ .Values.monitoring.targetPort | default 9090 }}
+      protocol: TCP
+      name: metrics
+      
+    # Istio proxy port for service mesh traffic
+    - port: 15090
+      targetPort: 15090
+      protocol: TCP
+      name: istio-proxy
+      
+  selector:
+    {{- include "api-gateway.selectorLabels" . | nindent 4 }}
+  
+  # Session affinity configuration
+  sessionAffinity: {{ .Values.service.sessionAffinity | default "None" }}
+  
+  # External traffic policy for preserving client source IPs
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | default "Local" }}
+  
+  {{- if eq .Values.service.type "LoadBalancer" }}
+  # Load balancer source ranges for enhanced security
+  {{- if .Values.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- range .Values.service.loadBalancerSourceRanges }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
