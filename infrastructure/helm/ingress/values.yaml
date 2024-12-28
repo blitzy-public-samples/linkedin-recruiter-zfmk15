@@ -1,0 +1,155 @@
+# ingress-nginx Helm chart configuration v4.7.1
+# Configures NGINX ingress controller with advanced security features
+ingress-nginx:
+  enabled: true
+  controller:
+    # High availability deployment with 2 replicas
+    replicaCount: 2
+    ingressClassName: nginx
+    
+    # Load balancer configuration for AWS
+    service:
+      type: LoadBalancer
+      externalTrafficPolicy: Local
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+        service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    
+    # Resource allocation for ingress controller
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    # NGINX configuration with security hardening
+    config:
+      # TLS 1.3 only with strong cipher suites
+      ssl-protocols: TLSv1.3
+      ssl-ciphers: ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384
+      
+      # Request size and timeout configurations
+      proxy-body-size: 8m
+      proxy-connect-timeout: "5"
+      proxy-read-timeout: "60"
+      proxy-send-timeout: "60"
+      
+      # Real IP and forwarding configuration
+      use-forwarded-headers: "true"
+      enable-real-ip: "true"
+      
+      # Connection and timeout settings
+      client-header-timeout: "60"
+      client-body-timeout: "60"
+      keep-alive-requests: "100"
+      keep-alive: "75"
+      
+      # Security headers
+      enable-ocsp: "true"
+      hsts: "true"
+      hsts-include-subdomains: "true"
+      hsts-max-age: "31536000"
+    
+    # Prometheus metrics configuration
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        namespace: monitoring
+        interval: 30s
+        scrapeTimeout: 10s
+    
+    # Pod anti-affinity for high availability
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - ingress-nginx
+            topologyKey: kubernetes.io/hostname
+
+# cert-manager configuration v1.12.3
+# Manages TLS certificates with Let's Encrypt integration
+cert-manager:
+  enabled: true
+  installCRDs: true
+  replicaCount: 2
+  
+  # DNS configuration for ACME challenges
+  extraArgs:
+    - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
+  
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    servicemonitor:
+      enabled: true
+      namespace: monitoring
+      interval: 30s
+  
+  # Resource allocation
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ClusterIssuer configuration for Let's Encrypt
+clusterIssuer:
+  name: letsencrypt-prod
+  server: https://acme-v02.api.letsencrypt.org/directory
+  email: devops@example.com
+  privateKeySecretRef:
+    name: letsencrypt-prod-account-key
+  solvers:
+    - http01:
+        ingress:
+          class: nginx
+
+# Domain configuration
+hostname: api.linkedin-search.example.com
+
+# TLS certificate configuration
+tls:
+  enabled: true
+  secretName: linkedin-search-tls
+  duration: 2160h  # 90 days
+  renewBefore: 360h  # 15 days
+  issuerEmail: devops@example.com
+  commonName: api.linkedin-search.example.com
+  dnsNames:
+    - api.linkedin-search.example.com
+
+# WAF configuration with ModSecurity and rate limiting
+waf:
+  enabled: true
+  rateLimit:
+    connections: 100
+    rpm: 300
+    burstMultiplier: 3
+    whitelistIPs: []
+  
+  security:
+    enableModSecurity: true
+    enableOWASPCoreRules: true
+    denylistIPs: []
+    customRules:
+      - SecRuleEngine On
+      - SecRequestBodyAccess On
+      - SecResponseBodyAccess On
+  
+  ddosProtection:
+    enabled: true
+    rateLimitZones:
+      - name: ip_zone
+        size: 10m
+        rate: 100r/s
