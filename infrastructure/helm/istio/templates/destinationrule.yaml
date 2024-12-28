@@ -1,0 +1,129 @@
+{{/* 
+Production-grade Istio DestinationRule template for LinkedIn Profile Search and Analysis System
+Version: v1beta1
+Purpose: Implements advanced traffic management, enhanced security policies, and optimized connection handling
+*/}}
+
+{{- define "destinationrule.tpl" -}}
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ .Values.destinationRules.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.destinationRules.labels.app }}
+    component: {{ .Values.destinationRules.labels.component }}
+    version: {{ .Values.destinationRules.labels.version }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    security.istio.io/tlsMode: {{ .Values.global.mtls.mode | default "STRICT" }}
+  annotations:
+    monitoring.istio.io/scrape: "true"
+    sidecar.istio.io/proxyCPU: {{ .Values.destinationRules.resources.proxy.cpu | default "100m" }}
+    sidecar.istio.io/proxyMemory: {{ .Values.destinationRules.resources.proxy.memory | default "128Mi" }}
+    security.istio.io/autoMTLS: "true"
+    mesh.istio.io/proxyConfig: |
+      proxyMetadata:
+        ISTIO_META_DNS_CAPTURE: "true"
+        ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+spec:
+  host: {{ .Values.destinationRules.host }}
+  trafficPolicy:
+    # Advanced load balancing configuration with consistent hashing
+    loadBalancer:
+      consistentHash:
+        httpHeaderName: "x-user-id"
+      localityLbSetting:
+        enabled: true
+        failover:
+          - from: region
+            to: closeregion
+        distribute:
+          - from: region
+            to:
+              region1: 80
+              region2: 20
+
+    # Production-optimized connection pool settings
+    connectionPool:
+      tcp:
+        maxConnections: {{ .Values.destinationRules.trafficPolicy.connectionPool.tcp.maxConnections }}
+        connectTimeout: {{ .Values.destinationRules.trafficPolicy.connectionPool.tcp.connectTimeout }}
+        tcpKeepalive:
+          time: "7200s"
+          interval: "75s"
+          probes: 3
+      http:
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 100
+        maxRetries: 3
+        idleTimeout: "30s"
+        h2UpgradePolicy: UPGRADE
+        useClientProtocol: true
+
+    # Enhanced outlier detection with progressive ejection
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: "30s"
+      baseEjectionTime: "30s"
+      maxEjectionPercent: 50
+      minHealthPercent: 40
+      splitExternalLocalOriginErrors: true
+      consecutiveGatewayErrors: 3
+      consecutiveLocalOriginFailures: 3
+
+    # Strict mTLS configuration with enhanced security
+    tls:
+      mode: ISTIO_MUTUAL
+      sni: {{ .Values.destinationRules.host }}
+      subjectAltNames:
+        - {{ .Values.destinationRules.host }}
+      caCertificates: "/etc/certs/root-cert.pem"
+      credentialName: "linkedin-search-cert"
+      verifyCertificateHash:
+        - "{{ .Values.destinationRules.trafficPolicy.tls.certHash }}"
+      verifySubjectAltName:
+        - "*.{{ .Release.Namespace }}.svc.cluster.local"
+
+  # Service subsets with version-based routing
+  subsets:
+    - name: {{ .Values.destinationRules.subsets.name }}
+      labels:
+        version: {{ .Values.destinationRules.subsets.labels.version }}
+      trafficPolicy:
+        loadBalancer:
+          simple: LEAST_CONN
+        connectionPool:
+          tcp:
+            maxConnections: 50
+            tcpKeepalive:
+              time: "7200s"
+              interval: "75s"
+          http:
+            maxRequestsPerConnection: 50
+            http2MaxRequests: 500
+        outlierDetection:
+          consecutive5xxErrors: 3
+          interval: "20s"
+          baseEjectionTime: "30s"
+          maxEjectionPercent: 50
+
+    - name: canary
+      labels:
+        version: canary
+      trafficPolicy:
+        loadBalancer:
+          simple: ROUND_ROBIN
+        connectionPool:
+          tcp:
+            maxConnections: 25
+          http:
+            maxRequestsPerConnection: 25
+        outlierDetection:
+          consecutive5xxErrors: 2
+          interval: "15s"
+          baseEjectionTime: "45s"
+          maxEjectionPercent: 25
+{{- end -}}
+
+{{/* Render the template */}}
+{{- template "destinationrule.tpl" . -}}
