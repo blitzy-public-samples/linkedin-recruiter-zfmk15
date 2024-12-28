@@ -1,0 +1,75 @@
+# Test environment configuration for LinkedIn Profile Search Data Service
+# Spring Boot Test v3.1+
+# H2 Database v2.1.214
+
+# Application configuration
+spring:
+  application:
+    name: data-service-test
+  
+  # H2 Database configuration for testing
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ''
+    driver-class-name: org.h2.Driver
+    hikari:
+      minimum-idle: 1
+      maximum-pool-size: 5
+      idle-timeout: 60000
+      pool-name: TestHikariCP
+
+  # JPA/Hibernate configuration
+  jpa:
+    hibernate.ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+  # MongoDB test configuration
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/linkedin_search_test
+      database: linkedin_search_test
+    
+    # Redis test configuration
+    redis:
+      host: localhost
+      port: 6379
+      database: 1
+
+  # Security configuration for testing
+  security:
+    jwt:
+      secret: test-secret-key-for-jwt-token-generation-and-validation
+      expiration: 3600000
+
+  # Database migration configuration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    clean-on-validation-error: true
+
+# Server configuration
+server:
+  port: 0  # Random port for testing
+
+# Management endpoints configuration
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: health
+
+# Logging configuration for testing
+logging:
+  level:
+    root: INFO
+    com.linkedin.search: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
