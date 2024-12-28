@@ -1,0 +1,92 @@
+version: 2
+updates:
+  # Frontend React application dependencies
+  - package-ecosystem: "npm"
+    directory: "/src/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    versioning-strategy: "auto"
+    labels:
+      - "dependencies"
+      - "frontend"
+    reviewers:
+      - "CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      react:
+        patterns:
+          - "react*"
+          - "@types/react*"
+        exclude-patterns:
+          - "react-native*"
+      mui:
+        patterns:
+          - "@mui/*"
+      typescript-eslint:
+        patterns:
+          - "@typescript-eslint/*"
+
+  # API Gateway Node.js service dependencies
+  - package-ecosystem: "npm"
+    directory: "/src/backend/api-gateway"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    versioning-strategy: "auto"
+    labels:
+      - "dependencies"
+      - "api-gateway"
+    reviewers:
+      - "CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+      testing:
+        patterns:
+          - "jest*"
+          - "@types/jest"
+          - "ts-jest"
+
+  # Analysis Service Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/src/backend/analysis-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "analysis-service"
+    reviewers:
+      - "CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      fastapi:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "pydantic"
+      testing:
+        patterns:
+          - "pytest*"
+      code-quality:
+        patterns:
+          - "black"
+          - "isort"
+          - "flake8"
+          - "mypy"
