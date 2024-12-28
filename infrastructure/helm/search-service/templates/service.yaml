@@ -1,0 +1,26 @@
+# Kubernetes Service template for LinkedIn Profile Search Service
+# Helm v3.12+, Kubernetes v1.27+
+apiVersion: v1
+kind: Service
+
+# Service metadata with name and labels from helper templates
+metadata:
+  name: {{ include "search-service.fullname" . }}
+  labels:
+    {{- include "search-service.labels" . | nindent 4 }}
+
+# Service specification defining type, ports and selector
+spec:
+  # Service type from values.yaml (defaults to ClusterIP)
+  type: {{ .Values.service.type }}
+  
+  # Port configuration for HTTP traffic
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      
+  # Pod selector using helper template for consistent labeling
+  selector:
+    {{- include "search-service.selectorLabels" . | nindent 4 }}
