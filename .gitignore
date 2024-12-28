@@ -1,0 +1,172 @@
+# Dependencies
+node_modules/
+venv/
+.env
+.env.*
+!.env.example
+package-lock.json
+yarn.lock
+poetry.lock
+pip-lock.txt
+
+# Build artifacts
+dist/
+build/
+target/
+*.class
+*.pyc
+__pycache__/
+.next/
+.nuxt/
+*.jar
+*.war
+*.ear
+
+# Testing and coverage
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+.coverage
+htmlcov/
+sonarqube-report/
+snyk-report/
+cypress/videos/
+cypress/screenshots/
+
+# IDE configurations
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+*.sublime-*
+.eclipse
+nbproject/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+logs/
+*.stackdump
+
+# System files
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.temp
+~$*
+
+# Infrastructure
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+kubeconfig
+.kube/
+*.pem
+*.key
+*.crt
+*.csr
+istio-*/
+helm-*/
+.aws/
+*.dockerfile.env
+docker-compose.override.yml
+
+# Security and credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.keystore
+*.jks
+.ssh/
+secrets.yaml
+*_rsa
+*_dsa
+*_ed25519
+*_ecdsa
+
+# CI/CD
+.github/.env
+.gitlab/.env
+*.env.ci
+*.env.cd
+coverage-reports/
+artifacts/
+.jenkins/
+.circleci/local/
+
+# Language-specific
+## Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+
+## Java
+target/
+.mvn/
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+
+## JavaScript/TypeScript
+node_modules/
+.npm
+.eslintcache
+.node_repl_history
+.yarn-integrity
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+## Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Project-specific
+## Frontend (React)
+src/web/.cache/
+src/web/build/
+src/web/coverage/
+src/web/.env*
+!src/web/.env.example
+
+## Backend Services
+src/backend/**/target/
+src/backend/**/.env*
+!src/backend/**/.env.example
+src/backend/**/logs/
+src/backend/**/dist/
+
+## Infrastructure
+infra/.terraform/
+infra/secrets/
+infra/certificates/
+infra/kubeconfig
