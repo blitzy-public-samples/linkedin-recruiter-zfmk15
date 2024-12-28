@@ -1,0 +1,233 @@
+name: Analysis Service CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/backend/analysis-service/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/backend/analysis-service/**'
+
+# Concurrency control to prevent parallel workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Required permissions for AWS, Docker, and security scanning
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+  security-events: write
+  deployments: write
+
+env:
+  PYTHON_VERSION: '3.11'
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  ECR_REPOSITORY: analysis-service
+  IMAGE_TAG: ${{ github.sha }}
+  MIN_COVERAGE: '80'
+  MAX_BUILD_TIME: '600'
+  MAX_DEPLOY_TIME: '900'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install
+
+      - name: Run tests with coverage
+        run: |
+          poetry run pytest \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-results.xml \
+            -v \
+            --maxfail=2 \
+            -n auto
+
+      - name: Verify coverage meets threshold
+        run: |
+          COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          if (( $(echo "$COVERAGE < ${{ env.MIN_COVERAGE }}" | bc -l) )); then
+            echo "Coverage ($COVERAGE%) is below minimum threshold (${{ env.MIN_COVERAGE }}%)"
+            exit 1
+          fi
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: |
+            coverage.xml
+            test-results.xml
+          retention-days: 14
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/python@v3
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: SonarQube analysis
+        uses: sonarsource/sonarqube-scan-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.python.version=${{ env.PYTHON_VERSION }}
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.tests=tests/
+            -Dsonar.qualitygate.wait=true
+
+      - name: Check for critical vulnerabilities
+        run: |
+          if [ -f snyk-results.json ]; then
+            CRITICAL_VULNS=$(jq '.vulnerabilities[] | select(.severity=="critical") | .id' snyk-results.json | wc -l)
+            if [ $CRITICAL_VULNS -gt 0 ]; then
+              echo "Found $CRITICAL_VULNS critical vulnerabilities"
+              exit 1
+            fi
+          fi
+
+  build-and-push:
+    name: Build and Push Image
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-flags: --debug
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/backend/analysis-service
+          file: ./src/backend/analysis-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+
+      - name: Verify image scan results
+        run: |
+          aws ecr wait image-scan-complete --repository-name ${{ env.ECR_REPOSITORY }} --image-id imageTag=${{ env.IMAGE_TAG }}
+          SCAN_FINDINGS=$(aws ecr describe-image-scan-findings --repository-name ${{ env.ECR_REPOSITORY }} --image-id imageTag=${{ env.IMAGE_TAG }})
+          CRITICAL_FINDINGS=$(echo $SCAN_FINDINGS | jq '.imageScanFindings.findingSeverityCounts.CRITICAL // 0')
+          if [ $CRITICAL_FINDINGS -gt 0 ]; then
+            echo "Found $CRITICAL_FINDINGS critical vulnerabilities in container image"
+            exit 1
+          fi
+
+  deploy:
+    name: Deploy to Production
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://api.example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name production-cluster --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to EKS
+        run: |
+          helm upgrade --install analysis-service ./infrastructure/helm/analysis-service \
+            --namespace production \
+            --set image.repository=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }} \
+            --set image.tag=${{ env.IMAGE_TAG }} \
+            --wait \
+            --timeout 15m
+
+      - name: Verify deployment health
+        run: |
+          kubectl rollout status deployment/analysis-service -n production --timeout=5m
+          READY_REPLICAS=$(kubectl get deployment analysis-service -n production -o jsonpath='{.status.readyReplicas}')
+          if [ "$READY_REPLICAS" -lt 2 ]; then
+            echo "Deployment failed: Less than 2 replicas are ready"
+            exit 1
+          fi
+
+      - name: Run smoke tests
+        run: |
+          ENDPOINT="https://api.example.com/health"
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" $ENDPOINT)
+            if [ $STATUS -eq 200 ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Health check failed after 5 attempts"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          helm rollback analysis-service -n production
+          echo "Deployment failed, rolling back to previous version"
