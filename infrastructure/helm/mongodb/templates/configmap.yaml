@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mongodb.fullname" . }}-config
+  labels:
+    {{- include "mongodb.labels" . | nindent 4 }}
+data:
+  mongod.conf: |
+    # MongoDB 6.0+ Production Configuration
+    
+    storage:
+      dbPath: /data/db
+      journal:
+        enabled: true
+      wiredTiger:
+        engineConfig:
+          # Set cache size to 50% of container memory limit
+          cacheSizeGB: {{ div (trimSuffix "Gi" .Values.resources.limits.memory | atoi) 2 }}
+          journalCompressor: snappy
+          directoryForIndexes: true
+          checkpointSizeMB: 512
+    
+    systemLog:
+      destination: file
+      path: /data/db/mongod.log
+      logAppend: true
+      verbosity: 0
+      component:
+        accessControl:
+          verbosity: 1
+        network:
+          verbosity: 1
+        query:
+          verbosity: 0
+        storage:
+          verbosity: 0
+        
+    net:
+      port: {{ .Values.service.port }}
+      bindIp: 0.0.0.0
+      maxIncomingConnections: 65536
+      wireObjectCheck: true
+      tls:
+        mode: {{ if .Values.tls.enabled }}requireTLS{{ else }}disabled{{ end }}
+        {{- if .Values.tls.enabled }}
+        certificateKeyFile: /tls/tls.pem
+        CAFile: /tls/ca.crt
+        allowInvalidCertificates: false
+        allowInvalidHostnames: false
+        disabledProtocols: ["TLS1_0", "TLS1_1"]
+        {{- end }}
+        
+    security:
+      authorization: {{ if .Values.auth.enabled }}enabled{{ else }}disabled{{ end }}
+      {{- if .Values.auth.enabled }}
+      keyFile: /auth/mongodb-key
+      clusterAuthMode: {{ if .Values.tls.enabled }}x509{{ else }}keyFile{{ end }}
+      {{- end }}
+      javascriptEnabled: false
+      redactClientLogData: true
+      enableEncryption: true
+      encryptionCipherMode: AES256-CBC
+      
+    replication:
+      replSetName: {{ include "mongodb.fullname" . }}
+      enableMajorityReadConcern: true
+      oplogSizeMB: 2048
+      
+    operationProfiling:
+      mode: slowOp
+      slowOpThresholdMs: 100
+      slowOpSampleRate: 1
+      
+    setParameter:
+      enableLocalhostAuthBypass: false
+      authenticationMechanisms: SCRAM-SHA-256
+      maxTransactionLockRequestTimeoutMillis: 5000
+      diagnosticDataCollectionEnabled: false
+      cursorTimeoutMillis: 600000
+      internalQueryMaxBlockingSortMemoryUsageBytes: 33554432
+      
+    processManagement:
+      fork: false
+      pidFilePath: /data/db/mongod.pid
+      timeZoneInfo: /usr/share/zoneinfo
+      
+    cloud:
+      monitoring:
+        free:
+          state: off
