@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "data-service.fullname" . }}
+  labels:
+    {{- include "data-service.labels" . | nindent 4 }}
+  annotations:
+    # Add deployment annotations for tracking and management
+    deployment.kubernetes.io/revision: "1"
+    kubernetes.io/change-cause: "Initial deployment of data service"
+spec:
+  # Set replicas from values with minimum of 2 for HA
+  replicas: {{ .Values.replicaCount }}
+  # Configure zero-downtime rolling updates
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  # Pod selector using common labels
+  selector:
+    matchLabels:
+      {{- include "data-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "data-service.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Add checksums for config and secrets to trigger pod restarts on changes
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secrets: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      # Enhanced security context for pod
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      # Configure service account if needed
+      serviceAccountName: {{ include "data-service.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          # Enhanced security context for container
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+          # Environment variables
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.environment | default "production" | quote }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          # Mount ConfigMap and Secrets
+          envFrom:
+            - configMapRef:
+                name: {{ include "data-service.fullname" . }}-config
+            - secretRef:
+                name: {{ include "data-service.fullname" . }}-secret
+          # Resource limits and requests
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          # Health checks using Spring Boot Actuator
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+          # Volume mounts if needed
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /cache
+      # Configure volumes
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+      # Pod distribution and scheduling
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "data-service.selectorLabels" . | nindent 20 }}
+                topologyKey: kubernetes.io/hostname
+      # Node selection and tolerations
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      # Termination grace period
+      terminationGracePeriodSeconds: 60
