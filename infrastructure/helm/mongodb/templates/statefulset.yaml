@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mongodb.fullname" . }}
+  labels: {{ include "mongodb.labels" . }}
+  annotations:
+    # Velero backup annotation for data volume
+    backup.velero.io/backup-volumes: data
+    # Configuration checksums for triggering rolling updates
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+
+spec:
+  serviceName: {{ include "mongodb.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+
+  selector:
+    matchLabels: {{ include "mongodb.selectorLabels" . }}
+
+  template:
+    metadata:
+      labels: {{ include "mongodb.labels" . }}
+      annotations:
+        # Prometheus scraping configuration
+        prometheus.io/scrape: "{{ .Values.metrics.enabled }}"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+        prometheus.io/path: /metrics
+
+    spec:
+      serviceAccountName: {{ include "mongodb.serviceAccountName" . }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      securityContext: {{ toYaml .Values.podSecurityContext | nindent 8 }}
+
+      # Initialize MongoDB with required configurations
+      initContainers:
+      - name: init-mongodb
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        command:
+        - bash
+        - -c
+        - {{ .Values.initScripts.content }}
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+
+      containers:
+      # Main MongoDB container
+      - name: mongodb
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        securityContext: {{ toYaml .Values.containerSecurityContext | nindent 12 }}
+        command:
+        - mongod
+        - --config
+        - /config/mongod.conf
+        ports:
+        - containerPort: {{ .Values.service.port }}
+          name: mongodb
+        env:
+        - name: MONGODB_REPLICA_SET_MODE
+          value: primary
+        - name: MONGODB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.auth.existingSecret }}
+              key: mongodb-root-password
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+        - name: config
+          mountPath: /config
+        - name: auth
+          mountPath: /auth
+          readOnly: true
+        resources: {{ toYaml .Values.resources | nindent 12 }}
+        
+        # Health checks
+        livenessProbe:
+          exec:
+            command:
+            - mongo
+            - --eval
+            - "db.adminCommand('ping')"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - mongo
+            - --eval
+            - "db.adminCommand('ping')"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Graceful shutdown
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - mongo
+              - --eval
+              - "db.adminCommand({ shutdown: 1 })"
+
+      # MongoDB Exporter container for Prometheus metrics
+      - name: metrics
+        image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+        imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+        securityContext: {{ toYaml .Values.metrics.securityContext | nindent 12 }}
+        ports:
+        - containerPort: {{ .Values.metrics.port }}
+          name: metrics
+        env:
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.auth.existingSecret }}
+              key: mongodb-metrics-uri
+        resources: {{ toYaml .Values.metrics.resources | nindent 12 }}
+
+      # Volume configurations
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "mongodb.fullname" . }}-config
+      - name: auth
+        secret:
+          secretName: {{ .Values.auth.existingSecret }}
+      - name: init-scripts
+        configMap:
+          name: {{ include "mongodb.fullname" . }}-init
+
+      # Pod anti-affinity for high availability
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - {{ include "mongodb.name" . }}
+            topologyKey: kubernetes.io/hostname
+
+      # Topology spread constraints for multi-AZ deployment
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels: {{ include "mongodb.selectorLabels" . }}
+
+  # Persistent volume claim template
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: {{ .Values.persistence.storageClass }}
+      resources:
+        requests:
+          storage: {{ .Values.persistence.size }}
