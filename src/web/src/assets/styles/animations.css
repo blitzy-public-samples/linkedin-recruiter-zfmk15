@@ -1,0 +1,183 @@
+/**
+ * Global CSS Animations and Transitions
+ * Following Material Design 3.0 Motion Guidelines
+ * 
+ * This file provides reusable animation classes for components across the application
+ * while respecting accessibility preferences for reduced motion.
+ * 
+ * Animation timing variables are imported from variables.css
+ */
+
+@import url('../assets/styles/variables.css');
+
+/* Base Keyframe Animations */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Reusable Animation Classes */
+
+.fade-in {
+  animation: fade-in var(--transition-duration-normal) var(--transition-timing-default);
+  will-change: opacity;
+}
+
+.fade-out {
+  animation: fade-out var(--transition-duration-normal) var(--transition-timing-default);
+  will-change: opacity;
+}
+
+.slide-up {
+  animation: slide-up var(--transition-duration-normal) var(--transition-timing-default);
+  will-change: transform, opacity;
+}
+
+.slide-down {
+  animation: slide-down var(--transition-duration-normal) var(--transition-timing-default);
+  will-change: transform, opacity;
+}
+
+.rotate {
+  animation: rotate 1s linear infinite;
+  will-change: transform;
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Common Transition Classes */
+
+.transition-default {
+  transition: all var(--transition-duration-normal) var(--transition-timing-default);
+}
+
+.transition-fast {
+  transition: all var(--transition-duration-fast) var(--transition-timing-default);
+}
+
+.transition-slow {
+  transition: all var(--transition-duration-slow) var(--transition-timing-default);
+}
+
+/* Material Design Specific Transitions */
+
+.elevation-transition {
+  transition: box-shadow var(--transition-duration-normal) var(--transition-timing-default);
+}
+
+.scale-transition {
+  transition: transform var(--transition-duration-normal) var(--transition-timing-default);
+}
+
+.color-transition {
+  transition: background-color var(--transition-duration-normal) var(--transition-timing-default),
+              color var(--transition-duration-normal) var(--transition-timing-default);
+}
+
+/* Accessibility - Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .rotate {
+    animation: none !important;
+  }
+
+  .pulse {
+    animation: none !important;
+  }
+}
+
+/* Animation Modifiers */
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Animation Fill Modes */
+
+.fill-forwards {
+  animation-fill-mode: forwards;
+}
+
+.fill-backwards {
+  animation-fill-mode: backwards;
+}
+
+.fill-both {
+  animation-fill-mode: both;
+}
