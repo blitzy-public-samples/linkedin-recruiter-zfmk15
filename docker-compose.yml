@@ -1,0 +1,245 @@
+# Docker Compose configuration for LinkedIn Profile Search and Analysis System
+# Version: 1.0.0
+# Supports: Docker Compose v3.9
+version: '3.9'
+
+services:
+  # Frontend Web Application
+  web:
+    build:
+      context: ./src/web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:3000
+        - VITE_API_VERSION=v1
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:3000
+      - VITE_API_VERSION=v1
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # API Gateway Service
+  api-gateway:
+    build:
+      context: ./src/backend/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    depends_on:
+      - search-service
+      - analysis-service
+      - data-service
+      - redis
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - SEARCH_SERVICE_URL=http://search-service:8000
+      - ANALYSIS_SERVICE_URL=http://analysis-service:8000
+      - DATA_SERVICE_URL=http://data-service:8082
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Search Service
+  search-service:
+    build:
+      context: ./src/backend/search-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - mongodb
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URL=mongodb://mongodb:27017/linkedin_search
+      - LOG_LEVEL=INFO
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Analysis Service
+  analysis-service:
+    build:
+      context: ./src/backend/analysis-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    depends_on:
+      - redis
+      - mongodb
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URL=mongodb://mongodb:27017/linkedin_analysis
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Data Service
+  data-service:
+    build:
+      context: ./src/backend/data-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/linkedin_data
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=linkedin_data
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d linkedin_data"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0-focal
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Cache
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+    labels:
+      environment: development
