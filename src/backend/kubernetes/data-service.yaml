@@ -1,0 +1,133 @@
+---
+# Data Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-service
+  namespace: default
+  labels:
+    app: data-service
+    component: backend
+    tier: data
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8082"
+    prometheus.io/path: "/actuator/prometheus"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: data-service
+  template:
+    metadata:
+      labels:
+        app: data-service
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: topology.kubernetes.io/zone
+                labelSelector:
+                  matchLabels:
+                    app: data-service
+      containers:
+        - name: data-service
+          image: ${ECR_REGISTRY}/data-service:${IMAGE_TAG}
+          ports:
+            - containerPort: 8082
+              protocol: TCP
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: DB_HOST
+              value: "linkedin-search-postgresql"
+            - name: DB_PORT
+              value: "5432"
+            - name: JAVA_OPTS
+              value: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xms2g -Xmx3g"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        runAsNonRoot: true
+
+---
+# Data Service Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-service
+  namespace: default
+  labels:
+    app: data-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8082
+      targetPort: 8082
+      protocol: TCP
+      name: http
+  selector:
+    app: data-service
+
+---
+# Data Service Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: data-service-monitor
+  namespace: default
+  labels:
+    app: data-service
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: data-service
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+      scrapeTimeout: 25s
+      metricRelabelings:
+        - sourceLabels: ["__name__"]
+          regex: jvm_.*
+          action: keep
