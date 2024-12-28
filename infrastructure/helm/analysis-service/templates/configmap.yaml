@@ -1,0 +1,77 @@
+{{/* Import helper templates */}}
+{{- include "analysis-service.helpers" . -}}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "analysis-service.fullname" . }}
+  labels:
+    {{- include "analysis-service.labels" . | nindent 4 }}
+    {{- with .Values.podLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.extraPodAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  # Claude AI Configuration
+  # Base URL for Claude AI API endpoints
+  CLAUDE_BASE_URL: {{ .Values.env.CLAUDE_BASE_URL | default "https://api.anthropic.com" | quote }}
+  
+  # Claude AI model version to use for analysis
+  CLAUDE_MODEL: {{ .Values.env.CLAUDE_MODEL | default "claude-2" | quote }}
+  
+  # Claude API version for compatibility
+  CLAUDE_API_VERSION: "v1"
+  
+  # Rate limiting configuration (500 requests per hour as per technical spec)
+  CLAUDE_RATE_LIMIT: "500"
+  CLAUDE_RATE_LIMIT_WINDOW: "3600"
+  
+  # Request timeout and retry configuration
+  CLAUDE_TIMEOUT: {{ .Values.env.REQUEST_TIMEOUT_SECONDS | default "30" | quote }}
+  CLAUDE_MAX_RETRIES: "3"
+  CLAUDE_RETRY_DELAY: "1"
+  
+  # Batch processing configuration
+  PROFILE_BATCH_SIZE: {{ .Values.env.PROFILE_BATCH_SIZE | default "10" | quote }}
+  MAX_CONCURRENT_REQUESTS: {{ .Values.env.MAX_CONCURRENT_REQUESTS | default "100" | quote }}
+  
+  # Logging Configuration
+  LOG_LEVEL: {{ .Values.env.LOG_LEVEL | default "INFO" | quote }}
+  LOG_FORMAT: "json"
+  LOG_OUTPUT: "stdout"
+  ENABLE_REQUEST_LOGGING: "true"
+  ENABLE_RESPONSE_LOGGING: "false" # Disabled for PII protection
+  
+  # Application Configuration
+  PORT: {{ .Values.env.PORT | default "8000" | quote }}
+  HEALTH_CHECK_INTERVAL: "30"
+  GRACEFUL_SHUTDOWN_TIMEOUT: "30"
+  
+  # Monitoring Configuration
+  METRICS_ENABLED: {{ .Values.monitoring.enabled | default "true" | quote }}
+  METRICS_PATH: {{ .Values.monitoring.serviceMonitor.path | default "/metrics" | quote }}
+  METRICS_INTERVAL: {{ .Values.monitoring.serviceMonitor.interval | default "30s" | quote }}
+  
+  # Cache Configuration
+  CACHE_ENABLED: "true"
+  CACHE_TTL: "3600"
+  CACHE_MAX_ITEMS: "10000"
+  
+  # Circuit Breaker Configuration
+  CIRCUIT_BREAKER_ENABLED: "true"
+  CIRCUIT_BREAKER_THRESHOLD: "50"
+  CIRCUIT_BREAKER_TIMEOUT: "60"
+  
+  # Security Configuration
+  ENABLE_CORS: "false"
+  TRUSTED_PROXIES: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+  MAX_REQUEST_SIZE: "1mb"
+  
+  # Feature Flags
+  ENABLE_PROFILE_CACHING: "true"
+  ENABLE_BATCH_PROCESSING: "true"
+  ENABLE_AUTO_RETRIES: "true"
+  ENABLE_RATE_LIMITING: "true"
