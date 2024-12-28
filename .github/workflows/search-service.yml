@@ -1,0 +1,201 @@
+name: Search Service CI/CD
+
+# Trigger on push to main and PRs targeting main, only for search service changes
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/backend/search-service/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/backend/search-service/**'
+
+# Concurrency control to prevent parallel workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Environment variables
+env:
+  AWS_REGION: us-west-2
+  PYTHON_VERSION: '3.11'
+  IMAGE_NAME: linkedin-search-service
+  COVERAGE_THRESHOLD: 80
+  SNYK_SEVERITY_THRESHOLD: high
+  DEPLOYMENT_TIMEOUT: 300s
+
+jobs:
+  test:
+    name: Test and Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: src/backend/search-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-cov pytest-asyncio pytest-benchmark
+
+      - name: Run linting
+        working-directory: src/backend/search-service
+        run: |
+          black --check .
+          isort --check-only .
+          mypy .
+          flake8 .
+
+      - name: Run tests with coverage
+        working-directory: src/backend/search-service
+        run: |
+          pytest --cov=src --cov-report=xml --cov-report=term-missing --junitxml=test-results.xml
+
+      - name: Check coverage threshold
+        run: |
+          coverage_percentage=$(coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          if (( $(echo "$coverage_percentage < $COVERAGE_THRESHOLD" | bc -l) )); then
+            echo "Coverage $coverage_percentage% is below threshold of $COVERAGE_THRESHOLD%"
+            exit 1
+          fi
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/python@v1
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=${{ env.SNYK_SEVERITY_THRESHOLD }}
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./src/backend/search-service/coverage.xml
+          flags: search-service
+          fail_ci_if_error: true
+
+  build-and-push:
+    name: Build and Push Image
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build Docker image
+        working-directory: src/backend/search-service
+        run: |
+          docker build \
+            --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+            --build-arg VCS_REF=${{ github.sha }} \
+            -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.11.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Push image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag ${{ env.IMAGE_NAME }}:${IMAGE_TAG} ${ECR_REGISTRY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
+          docker tag ${{ env.IMAGE_NAME }}:${IMAGE_TAG} ${ECR_REGISTRY}/${{ env.IMAGE_NAME }}:latest
+          docker push ${ECR_REGISTRY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
+          docker push ${ECR_REGISTRY}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Generate SBOM
+        run: |
+          docker sbom ${{ env.IMAGE_NAME }}:${{ github.sha }} > sbom.spdx
+          
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: sbom.spdx
+
+  deploy:
+    name: Deploy to EKS
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      deployments: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name linkedin-search-cluster --region ${{ env.AWS_REGION }}
+
+      - name: Deploy to EKS
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          kubectl set image deployment/search-service \
+            search-service=${ECR_REGISTRY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG} \
+            -n search-system
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/search-service \
+            -n search-system \
+            --timeout=${{ env.DEPLOYMENT_TIMEOUT }}
+
+      - name: Run health checks
+        run: |
+          endpoint=$(kubectl get svc search-service -n search-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          for i in {1..5}; do
+            curl -f http://${endpoint}/health && break || sleep 10
+          done
+
+      - name: Create deployment status
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment-url: https://search-api.example.com
+          state: "success"
+          deployment-id: ${{ github.run_id }}
