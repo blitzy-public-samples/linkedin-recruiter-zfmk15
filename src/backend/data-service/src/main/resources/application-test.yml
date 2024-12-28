@@ -1,0 +1,77 @@
+# Test Environment Configuration
+# Spring Boot Test v3.1+
+# H2 Database v2.1.214
+
+# Active Profile and Server Configuration
+spring:
+  profiles:
+    active: test
+server:
+  port: 0  # Random port for testing
+
+# Database Configurations
+spring:
+  # H2 Database Configuration
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ''
+    driver-class-name: org.h2.Driver
+    hikari:
+      minimum-idle: 1
+      maximum-pool-size: 5
+      idle-timeout: 300000
+      connection-timeout: 30000
+      pool-name: TestHikariCP
+
+  # JPA Configuration
+  jpa:
+    hibernate.ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+  # MongoDB Test Configuration
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/linkedin_search_test
+      database: linkedin_search_test
+
+    # Redis Test Configuration
+    redis:
+      host: localhost
+      port: 6379
+      database: 1
+
+  # Security Configuration for Testing
+  security:
+    jwt:
+      secret: test-secret-key
+      expiration: 3600000
+
+  # Disable Flyway for Testing
+  flyway:
+    enabled: false
+
+# Management & Monitoring Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  metrics:
+    export:
+      prometheus:
+        enabled: false
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.linkedin.search: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
