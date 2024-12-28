@@ -1,0 +1,173 @@
+# Default values for analysis-service
+# This is a YAML-formatted file.
+
+# Number of pod replicas to run
+# Minimum 2 for high availability
+replicaCount: 2
+
+# Container image configuration
+image:
+  repository: analysis-service
+  tag: 1.0.0
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+
+# Resource requests and limits based on technical specifications
+# Limits: 4 CPU, 8GB RAM
+# Requests: 2 CPU, 4GB RAM for baseline performance
+resources:
+  limits:
+    cpu: "4"
+    memory: 8Gi
+  requests:
+    cpu: "2"
+    memory: 4Gi
+
+# Horizontal Pod Autoscaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Environment variables for the Analysis Service
+env:
+  # Claude AI configuration
+  CLAUDE_BASE_URL: "https://api.anthropic.com"
+  CLAUDE_MODEL: "claude-2"
+  # Application configuration
+  LOG_LEVEL: "INFO"
+  PORT: 8000
+  # Additional configurations
+  MAX_CONCURRENT_REQUESTS: 100
+  REQUEST_TIMEOUT_SECONDS: 30
+  PROFILE_BATCH_SIZE: 10
+
+# Secret configurations
+secrets:
+  claudeApiKey:
+    name: claude-api-key
+    key: api-key
+
+# Prometheus monitoring configuration
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: "30s"
+    scrapeTimeout: "10s"
+    path: "/metrics"
+
+# Pod annotations for Prometheus scraping
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "8000"
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Pod security context
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true
+
+# Container security context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+
+# Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Pod affinity rules for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchLabels:
+            app: analysis-service
+        topologyKey: kubernetes.io/hostname
+
+# Node affinity to ensure pods run on appropriate nodes
+nodeAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+    nodeSelectorTerms:
+    - matchExpressions:
+      - key: kubernetes.io/arch
+        operator: In
+        values:
+        - amd64
+        - arm64
+
+# Pod topology spread constraints
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app: analysis-service
+
+# Network policy
+networkPolicy:
+  enabled: true
+  ingressRules:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+        - podSelector:
+            matchLabels:
+              app: search-service
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Ingress configuration
+ingress:
+  enabled: false
+
+# Extra volumes and volume mounts
+extraVolumes: []
+extraVolumeMounts: []
+
+# Additional pod labels
+podLabels: {}
+
+# Additional pod annotations
+extraPodAnnotations: {}
+
+# Priority class name
+priorityClassName: "high-priority"
