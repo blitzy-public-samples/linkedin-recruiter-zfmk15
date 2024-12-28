@@ -1,0 +1,85 @@
+# Default values for data-service Helm chart
+# This is a YAML-formatted file.
+
+# Number of pod replicas for high availability
+replicaCount: 2
+
+# Maximum number of revisions to maintain in revision history
+revisionHistoryLimit: 5
+
+# Container image configuration
+image:
+  repository: data-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Service configuration for internal access
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+# Resource limits and requests for the data service pods
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Pod security context for running as non-root user
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Container security context with restricted permissions
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Health check configuration using Spring Boot Actuator endpoints
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Node selection configuration
+nodeSelector: {}
+
+# Pod scheduling tolerations
+tolerations: []
+
+# Pod anti-affinity for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: data-service
+          topologyKey: kubernetes.io/hostname
+
+# Optional name override configurations
+nameOverride: ""
+fullnameOverride: ""
