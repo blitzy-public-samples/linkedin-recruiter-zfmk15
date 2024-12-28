@@ -1,0 +1,61 @@
+# cert-manager Certificate resource template v1.12.3
+# Configures automated TLS certificate management for secure HTTPS communication
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-certificate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    security.linkedin-search.io/component: tls-certificate
+    monitoring.linkedin-search.io/certificate: enabled
+  annotations:
+    # Enable temporary certificates during initial provisioning
+    cert-manager.io/issue-temporary-certificate: "true"
+    # Configure monitoring alerts for certificate expiry
+    monitoring.linkedin-search.io/expiry-alert: "30d"
+    # Configure automatic key rotation policy
+    security.linkedin-search.io/key-rotation: "90d"
+
+spec:
+  # Reference to Kubernetes secret that will store the certificate
+  secretName: {{ .Values.tls.secretName }}
+  
+  # Certificate validity duration and renewal window
+  duration: {{ .Values.tls.duration | default "2160h" }}  # 90 days
+  renewBefore: {{ .Values.tls.renewBefore | default "360h" }}  # 15 days
+  
+  # Certificate subject information
+  subject:
+    organizations:
+      - LinkedIn Search
+    organizationalUnits:
+      - Security
+    countries:
+      - US
+  
+  # Private key configuration
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+    rotationPolicy: Always
+  
+  # Certificate usage types
+  usages:
+    - server auth
+    - client auth
+  
+  # DNS names for the certificate
+  dnsNames:
+    - {{ .Values.hostname }}
+    # Include internal Kubernetes service DNS
+    - {{ .Values.hostname }}.{{ .Release.Namespace }}.svc.cluster.local
+  
+  # Reference to the certificate issuer
+  issuerRef:
+    name: {{ .Values.clusterIssuer }}
+    kind: ClusterIssuer
+    group: cert-manager.io
