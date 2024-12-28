@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "analysis-service.fullname" . }}
+  labels:
+    {{- include "analysis-service.labels" . | nindent 4 }}
+    # Service mesh integration labels
+    service.istio.io/canonical-name: {{ include "analysis-service.fullname" . }}
+    service.istio.io/canonical-revision: {{ .Values.image.tag | quote }}
+  annotations:
+    # Service mesh annotations
+    service.istio.io/inject: "true"
+    # Prometheus monitoring annotations
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.service.port }}"
+    prometheus.io/path: "/metrics"
+    # AWS Load Balancer annotations (if needed)
+    {{- if eq .Values.service.type "LoadBalancer" }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    {{- end }}
+    # Custom service annotations from values.yaml
+    {{- with .Values.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort | default .Values.service.port }}
+      protocol: TCP
+      name: http
+      {{- if eq .Values.service.type "NodePort" }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "analysis-service.selectorLabels" . | nindent 4 }}
+  # Session affinity for consistent routing
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours
+  # Ensure service has cluster-wide visibility
+  publishNotReadyAddresses: false
+  # Topology aware hints for better routing
+  topologyKeys:
+    - "kubernetes.io/hostname"
+    - "topology.kubernetes.io/zone"
+    - "topology.kubernetes.io/region"
+    - "*"
