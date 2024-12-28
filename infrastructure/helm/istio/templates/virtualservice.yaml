@@ -1,0 +1,119 @@
+{{/* 
+VirtualService Template for LinkedIn Profile Search and Analysis System
+Version: 1.20+
+Purpose: Defines comprehensive routing rules and traffic management policies
+*/}}
+
+{{- define "virtualservice.tpl" -}}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ .Values.virtualServices.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.virtualServices.labels.app }}
+    component: {{ .Values.virtualServices.labels.component }}
+    version: {{ .Values.virtualServices.labels.version }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    # Security and monitoring labels
+    security.istio.io/tlsMode: {{ .Values.tls.mode }}
+    monitoring.istio.io/scrape: "true"
+spec:
+  hosts:
+    {{- range .Values.virtualServices.hosts }}
+    - {{ . }}
+    {{- end }}
+  gateways:
+    - {{ .Release.Name }}-gateway
+  # HTTP routing rules for different services
+  http:
+    # Search Service Routes
+    - name: search-routes
+      match:
+        - uri:
+            prefix: {{ .Values.virtualServices.routes.search.prefix }}
+          headers:
+            version:
+              exact: v1
+      route:
+        - destination:
+            host: {{ .Values.virtualServices.routes.search.service }}
+            port:
+              number: {{ .Values.virtualServices.routes.search.port }}
+            subset: v1
+          weight: 100
+      timeout: {{ .Values.virtualServices.routes.search.timeout }}
+      retries:
+        attempts: {{ .Values.virtualServices.routes.search.retries.attempts }}
+        perTryTimeout: {{ .Values.virtualServices.routes.search.retries.perTryTimeout }}
+        retryOn: {{ .Values.virtualServices.routes.search.retries.retryOn }}
+      fault:
+        delay:
+          percentage:
+            value: {{ .Values.virtualServices.routes.search.faultInjection.delay.percentage.value }}
+          fixedDelay: {{ .Values.virtualServices.routes.search.faultInjection.delay.fixedDelay }}
+      corsPolicy:
+        allowOrigins:
+          - exact: https://linkedin-search.com
+        allowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        allowHeaders:
+          - authorization
+          - content-type
+        maxAge: "24h"
+        
+    # Analysis Service Routes
+    - name: analysis-routes
+      match:
+        - uri:
+            prefix: {{ .Values.virtualServices.routes.analysis.prefix }}
+          headers:
+            version:
+              exact: v1
+      route:
+        - destination:
+            host: {{ .Values.virtualServices.routes.analysis.service }}
+            port:
+              number: {{ .Values.virtualServices.routes.analysis.port }}
+            subset: v1
+          weight: 100
+      timeout: {{ .Values.virtualServices.routes.analysis.timeout }}
+      retries:
+        attempts: {{ .Values.virtualServices.routes.analysis.retries.attempts }}
+        perTryTimeout: {{ .Values.virtualServices.routes.analysis.retries.perTryTimeout }}
+        retryOn: {{ .Values.virtualServices.routes.analysis.retries.retryOn }}
+      
+    # API Gateway Routes
+    - name: api-routes
+      match:
+        - uri:
+            prefix: {{ .Values.virtualServices.routes.api.prefix }}
+          headers:
+            version:
+              exact: v1
+      route:
+        - destination:
+            host: {{ .Values.virtualServices.routes.api.service }}
+            port:
+              number: {{ .Values.virtualServices.routes.api.port }}
+            subset: v1
+          weight: 100
+      timeout: {{ .Values.virtualServices.routes.api.timeout }}
+      retries:
+        attempts: {{ .Values.virtualServices.routes.api.retries.attempts }}
+        perTryTimeout: {{ .Values.virtualServices.routes.api.retries.perTryTimeout }}
+        retryOn: {{ .Values.virtualServices.routes.api.retries.retryOn }}
+      headers:
+        request:
+          set:
+            x-request-id: "%REQ(x-request-id)%"
+            x-b3-traceid: "%REQ(x-b3-traceid)%"
+            x-b3-spanid: "%REQ(x-b3-spanid)%"
+            x-b3-parentspanid: "%REQ(x-b3-parentspanid)%"
+            x-b3-sampled: "%REQ(x-b3-sampled)%"
+{{- end -}}
+
+# Generate the VirtualService resource
+{{- template "virtualservice.tpl" . }}
