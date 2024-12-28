@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "data-service.fullname" . }}
+  labels:
+    {{- include "data-service.labels" . | nindent 4 }}
+  annotations:
+    # Service version annotation for tracking
+    service.kubernetes.io/version: {{ .Chart.Version | quote }}
+    # Indicate this is a data service component
+    service.kubernetes.io/component: "data-service"
+spec:
+  # Service type from values.yaml (defaults to ClusterIP for internal access)
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+      {{- if eq .Values.service.type "NodePort" }}
+      # Only set nodePort if service type is NodePort and it's specified in values
+      {{- if .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+      {{- end }}
+  # Selector labels to match pods from the deployment
+  selector:
+    {{- include "data-service.selectorLabels" . | nindent 4 }}
+  # Session affinity configuration if needed
+  {{- if .Values.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.service.sessionAffinity }}
+  {{- if .Values.service.sessionAffinityConfig }}
+  sessionAffinityConfig:
+    {{- toYaml .Values.service.sessionAffinityConfig | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  # Internal traffic policy for improved routing
+  {{- if .Values.service.internalTrafficPolicy }}
+  internalTrafficPolicy: {{ .Values.service.internalTrafficPolicy }}
+  {{- end }}
+  # External traffic policy for preserving client source IPs if needed
+  {{- if and (ne .Values.service.type "ClusterIP") .Values.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+  {{- end }}
