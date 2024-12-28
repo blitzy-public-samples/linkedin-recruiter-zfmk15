@@ -1,0 +1,185 @@
+{
+  "common": {
+    "buttons": {
+      "search": "Search",
+      "clear": "Clear",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "export": "Export",
+      "view": "View Details",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "close": "Close",
+      "confirm": "Confirm",
+      "apply": "Apply"
+    },
+    "labels": {
+      "loading": "Loading...",
+      "error": "Error",
+      "success": "Success",
+      "warning": "Warning",
+      "required": "Required",
+      "optional": "Optional",
+      "selected": "Selected",
+      "all": "All",
+      "none": "None",
+      "more": "More",
+      "less": "Less"
+    },
+    "navigation": {
+      "dashboard": "Dashboard",
+      "search": "Search",
+      "profiles": "Profiles",
+      "analytics": "Analytics",
+      "settings": "Settings",
+      "help": "Help",
+      "account": "Account",
+      "logout": "Logout"
+    },
+    "errors": {
+      "required": "This field is required",
+      "invalid": "Invalid input",
+      "serverError": "Server error occurred",
+      "networkError": "Network error occurred",
+      "unauthorized": "Unauthorized access",
+      "notFound": "Resource not found",
+      "validation": "Validation error",
+      "rateLimit": "Rate limit exceeded",
+      "timeout": "Request timeout"
+    },
+    "accessibility": {
+      "skipToMain": "Skip to main content",
+      "menuToggle": "Toggle menu",
+      "searchInput": "Search input",
+      "filterToggle": "Toggle filters",
+      "modalClose": "Close modal",
+      "expandSection": "Expand section",
+      "collapseSection": "Collapse section"
+    }
+  },
+  "search": {
+    "form": {
+      "keywords": "Keywords",
+      "keywordsPlaceholder": "Enter search keywords...",
+      "location": "Location",
+      "locationPlaceholder": "Enter location...",
+      "experience": "Experience",
+      "experienceYears": "Years of Experience",
+      "skills": "Skills",
+      "skillsPlaceholder": "Add skills...",
+      "requiredSkills": "Required Skills",
+      "optionalSkills": "Nice to Have Skills",
+      "addSkill": "Add Skill",
+      "removeSkill": "Remove Skill",
+      "searchTemplate": "Search Template",
+      "saveTemplate": "Save Template",
+      "loadTemplate": "Load Template",
+      "deleteTemplate": "Delete Template"
+    },
+    "results": {
+      "found": "{{count}} profiles found",
+      "noResults": "No profiles found",
+      "sortBy": "Sort by",
+      "relevance": "Relevance",
+      "recentlyUpdated": "Recently Updated",
+      "matchScore": "Match Score",
+      "experienceLevel": "Experience Level",
+      "locationMatch": "Location Match",
+      "skillMatch": "Skill Match"
+    },
+    "filters": {
+      "title": "Filters",
+      "clear": "Clear Filters",
+      "apply": "Apply Filters",
+      "experience": {
+        "entry": "0-2 years",
+        "mid": "3-5 years",
+        "senior": "5+ years"
+      },
+      "location": {
+        "remote": "Remote",
+        "onsite": "Onsite",
+        "hybrid": "Hybrid"
+      }
+    }
+  },
+  "profile": {
+    "details": {
+      "experience": "Experience",
+      "education": "Education",
+      "skills": "Skills",
+      "certifications": "Certifications",
+      "present": "Present",
+      "years": "{{count}} years",
+      "months": "{{count}} months",
+      "matchScore": "Match Score",
+      "analysis": "Profile Analysis",
+      "topMatch": "Top Match Indicators",
+      "skillMatch": "Skill Match",
+      "experienceMatch": "Experience Match",
+      "industryMatch": "Industry Match",
+      "recommendations": "Recommendations",
+      "projects": "Projects",
+      "publications": "Publications",
+      "languages": "Languages"
+    },
+    "actions": {
+      "contact": "Contact",
+      "save": "Save Profile",
+      "share": "Share Profile",
+      "export": "Export Profile",
+      "generateReport": "Generate Report",
+      "addNote": "Add Note",
+      "addTag": "Add Tag",
+      "archive": "Archive",
+      "restore": "Restore"
+    },
+    "analysis": {
+      "aiScore": "AI Analysis Score",
+      "confidence": "Confidence Level",
+      "keyFindings": "Key Findings",
+      "recommendations": "Recommendations",
+      "skillGaps": "Skill Gaps",
+      "potential": "Growth Potential"
+    }
+  },
+  "analytics": {
+    "metrics": {
+      "totalSearches": "Total Searches",
+      "profilesFound": "Profiles Found",
+      "averageMatch": "Average Match Score",
+      "topSearchTerms": "Top Search Terms",
+      "searchVolume": "Search Volume",
+      "profileViews": "Profile Views",
+      "exportedProfiles": "Exported Profiles",
+      "savedSearches": "Saved Searches"
+    },
+    "charts": {
+      "searchPerformance": "Search Performance",
+      "matchDistribution": "Match Score Distribution",
+      "skillsDistribution": "Skills Distribution",
+      "locationHeatmap": "Location Heatmap",
+      "timelineTrends": "Timeline Trends",
+      "comparisonMetrics": "Comparison Metrics"
+    },
+    "filters": {
+      "dateRange": "Date Range",
+      "lastWeek": "Last Week",
+      "lastMonth": "Last Month",
+      "lastQuarter": "Last Quarter",
+      "custom": "Custom Range",
+      "fromDate": "From Date",
+      "toDate": "To Date",
+      "applyRange": "Apply Range"
+    },
+    "export": {
+      "format": "Export Format",
+      "includeCharts": "Include Charts",
+      "dataPoints": "Data Points",
+      "generateReport": "Generate Report"
+    }
+  }
+}
