@@ -1,0 +1,93 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: linkedin-profile-search
+  annotations:
+    # Ingress Controller Configuration
+    kubernetes.io/ingress.class: nginx
+    
+    # TLS/Certificate Configuration
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer.name }}
+    
+    # SSL/TLS Security Hardening
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256"
+    nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers: "true"
+    
+    # Security Headers
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-include-subdomains: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
+    nginx.ingress.kubernetes.io/x-frame-options: "DENY"
+    nginx.ingress.kubernetes.io/x-content-type-options: "nosniff"
+    nginx.ingress.kubernetes.io/referrer-policy: "strict-origin-when-cross-origin"
+    
+    # Request Size and Timeout Settings
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress-nginx.controller.config.proxy-body-size | quote }}
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: {{ .Values.ingress-nginx.controller.config.proxy-connect-timeout | quote }}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: {{ .Values.ingress-nginx.controller.config.proxy-read-timeout | quote }}
+    nginx.ingress.kubernetes.io/proxy-send-timeout: {{ .Values.ingress-nginx.controller.config.proxy-send-timeout | quote }}
+    
+    # Real IP Configuration
+    nginx.ingress.kubernetes.io/enable-real-ip: "true"
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    
+    # WAF and Rate Limiting Configuration
+    nginx.ingress.kubernetes.io/limit-connections: {{ .Values.waf.rateLimit.connections | quote }}
+    nginx.ingress.kubernetes.io/limit-rpm: {{ .Values.waf.rateLimit.rpm | quote }}
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: {{ .Values.waf.rateLimit.burstMultiplier | quote }}
+    nginx.ingress.kubernetes.io/enable-modsecurity: {{ .Values.waf.security.enableModSecurity | quote }}
+    {{- if .Values.waf.security.enableModSecurity }}
+    nginx.ingress.kubernetes.io/modsecurity-snippet: |
+      {{- range .Values.waf.security.customRules }}
+      {{ . }}
+      {{- end }}
+    {{- end }}
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: {{ .Values.waf.security.enableOWASPCoreRules | quote }}
+    
+    # DDoS Protection
+    {{- if .Values.waf.ddosProtection.enabled }}
+    nginx.ingress.kubernetes.io/limit-rate-zones: |
+      {{- range .Values.waf.ddosProtection.rateLimitZones }}
+      zone={{ .name }}:{{ .size }} rate={{ .rate }};
+      {{- end }}
+    {{- end }}
+    
+    # Prometheus Metrics
+    {{- if .Values.ingress-nginx.controller.metrics.enabled }}
+    prometheus.io/scrape: "true"
+    prometheus.io/port: {{ .Values.ingress-nginx.controller.metrics.serviceMonitor.port | default "10254" | quote }}
+    prometheus.io/path: /metrics
+    {{- end }}
+
+spec:
+  # TLS Configuration
+  tls:
+  - hosts:
+    - {{ .Values.hostname }}
+    secretName: {{ .Values.tls.secretName }}
+  
+  # Routing Rules
+  rules:
+  - host: {{ .Values.hostname }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Release.Name }}-api-gateway
+            port:
+              number: 80
+
+  # Default Backend for 404/503
+  defaultBackend:
+    service:
+      name: {{ .Release.Name }}-default-backend
+      port:
+        number: 80
