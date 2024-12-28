@@ -1,0 +1,57 @@
+# Helm API version for Kubernetes compatibility
+apiVersion: v2
+
+# Chart name and basic metadata
+name: analysis-service
+version: 1.0.0
+appVersion: 1.0.0
+type: application
+description: A Helm chart for deploying the LinkedIn Profile Analysis Service using Claude AI, featuring auto-scaling, monitoring, and caching capabilities
+
+# Chart maintainer information
+maintainers:
+  - name: DevOps Team
+    email: devops@company.com
+
+# Keywords for chart discovery and categorization
+keywords:
+  - analysis
+  - claude-ai
+  - linkedin
+  - profile-analysis
+  - fastapi
+  - prometheus
+  - redis
+  - kubernetes
+
+# Chart dependencies
+dependencies:
+  - name: prometheus
+    version: 15.0.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.enabled
+  - name: redis
+    version: 17.0.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+
+# Engine requirements
+engine: ">=3.0.0"
+
+# Additional requirements
+kubeVersion: ">=1.27.0"
+
+# Home URL for the project (optional)
+home: https://github.com/company/linkedin-profile-analysis
+
+# Sources for the chart
+sources:
+  - https://github.com/company/linkedin-profile-analysis
+
+# Annotations for additional metadata
+annotations:
+  category: Analytics
+  licenses: Apache-2.0
+  artifacthub.io/operator: "false"
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/containsSecurityUpdates: "false"
