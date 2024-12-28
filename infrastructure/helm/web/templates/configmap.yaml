@@ -1,0 +1,52 @@
+# Kubernetes ConfigMap for web frontend configuration
+# Version: v1
+# Dependencies:
+# - helm: v3.12+
+# - kubernetes: v1.27+
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "web.fullname" . }}-config
+  labels:
+    {{- include "web.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+data:
+  # API Configuration
+  # Base URL for backend API endpoints
+  VITE_API_BASE_URL: {{ tpl .Values.web.config.apiBaseUrl . | quote }}
+  # API version for endpoint routing
+  VITE_API_VERSION: {{ .Values.web.config.apiVersion | default "v1" | quote }}
+  
+  # Authentication Configuration
+  # Auth0 domain for authentication
+  VITE_AUTH_DOMAIN: {{ tpl .Values.web.config.authDomain . | quote }}
+  # Auth0 client ID for application
+  VITE_AUTH_CLIENT_ID: {{ .Values.web.config.authClientId | quote }}
+  # Auth0 audience for API access
+  VITE_AUTH_AUDIENCE: {{ .Values.web.config.authAudience | quote }}
+  
+  # Internationalization Settings
+  # Default application language
+  VITE_DEFAULT_LANGUAGE: {{ .Values.web.config.defaultLanguage | default "en" | quote }}
+  # Supported language codes (comma-separated)
+  VITE_SUPPORTED_LANGUAGES: {{ .Values.web.config.supportedLanguages | default "en,es,fr" | quote }}
+  
+  # UI Configuration
+  # Default theme setting (light/dark)
+  VITE_DEFAULT_THEME: {{ .Values.web.config.defaultTheme | default "light" | quote }}
+  # Analytics toggle flag
+  VITE_ENABLE_ANALYTICS: {{ .Values.web.config.enableAnalytics | default "true" | quote }}
+  
+  # Network Configuration
+  # API request timeout in milliseconds
+  VITE_REQUEST_TIMEOUT: {{ .Values.web.config.requestTimeout | default "30000" | quote }}
+  # WebSocket endpoint for real-time updates
+  VITE_WEBSOCKET_URL: {{ tpl .Values.web.config.websocketUrl . | quote }}
+  
+  {{- if .Values.web.config.additional }}
+  # Additional custom configuration
+  {{- range $key, $value := .Values.web.config.additional }}
+  {{ $key }}: {{ tpl $value $ | quote }}
+  {{- end }}
+  {{- end }}
