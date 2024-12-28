@@ -1,0 +1,1 @@
+I would like to create a product that searches through linkedin profiles to find the ideal candidate for a role we are currently looking for. I would scrape throuth linkedin profiles and then copy the profile and send it to a pre-trained claude project
