@@ -1,0 +1,37 @@
+# LinkedIn Profile Search Application Crawler Configuration
+# Last Updated: 2024
+# Controls search engine access to application routes
+# Protects authenticated and API routes
+# Implements rate limiting for crawlers
+
+# Default rules for all crawlers
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /forgot-password
+Allow: /assets/*
+Allow: /icons/*
+Disallow: /dashboard/*
+Disallow: /search/*
+Disallow: /profile/*
+Disallow: /analytics/*
+Disallow: /settings/*
+Disallow: /api/*
+
+# Specific rules for Googlebot with crawl rate control
+User-agent: Googlebot
+Crawl-delay: 10
+Allow: /
+Allow: /login
+Allow: /forgot-password
+Allow: /assets/*
+Allow: /icons/*
+Disallow: /dashboard/*
+Disallow: /search/*
+Disallow: /profile/*
+Disallow: /analytics/*
+Disallow: /settings/*
+Disallow: /api/*
+
+# Reference to XML sitemap for improved indexing
+Sitemap: /sitemap.xml
