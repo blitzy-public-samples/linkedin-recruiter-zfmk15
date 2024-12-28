@@ -1,0 +1,118 @@
+# ConfigMap template for data service configuration
+# Version: 1.0.0
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "data-service.fullname" . }}-config
+  labels:
+    {{- include "data-service.labels" . | nindent 4 }}
+data:
+  application.yml: |
+    spring:
+      application:
+        name: linkedin-data-service
+        version: {{ .Chart.Version }}
+      
+      # PostgreSQL Primary Database Configuration
+      datasource:
+        url: jdbc:postgresql://{{ .Values.postgresql.host }}:5432/{{ .Values.postgresql.database }}
+        username: ${POSTGRESQL_USERNAME}  # Loaded from secrets
+        password: ${POSTGRESQL_PASSWORD}  # Loaded from secrets
+        hikari:
+          maximum-pool-size: {{ .Values.postgresql.pool.maxSize | default 10 }}
+          minimum-idle: {{ .Values.postgresql.pool.minIdle | default 5 }}
+          idle-timeout: 300000
+          connection-timeout: 20000
+          max-lifetime: 1200000
+          auto-commit: true
+          pool-name: DataServiceHikariPool
+      
+      # MongoDB Document Store Configuration  
+      data:
+        mongodb:
+          uri: mongodb://{{ .Values.mongodb.host }}:27017/{{ .Values.mongodb.database }}
+          database: {{ .Values.mongodb.database }}
+          authentication-database: {{ .Values.mongodb.authDatabase | default "admin" }}
+          username: ${MONGODB_USERNAME}  # Loaded from secrets
+          password: ${MONGODB_PASSWORD}  # Loaded from secrets
+          connection-pool-size: {{ .Values.mongodb.pool.size | default 20 }}
+          max-connection-idle-time: 60000
+          max-connection-life-time: 300000
+          server-selection-timeout: 30000
+          socket-timeout: 20000
+          
+        # Redis Cache Configuration
+        redis:
+          host: {{ .Values.redis.host }}
+          port: {{ .Values.redis.port | default 6379 }}
+          password: ${REDIS_PASSWORD}  # Loaded from secrets
+          database: {{ .Values.redis.database | default 0 }}
+          timeout: 2000
+          pool:
+            max-active: {{ .Values.redis.pool.maxActive | default 8 }}
+            max-idle: {{ .Values.redis.pool.maxIdle | default 8 }}
+            min-idle: {{ .Values.redis.pool.minIdle | default 2 }}
+            max-wait: 1000
+
+    # Security Configuration
+    security:
+      cors:
+        allowed-origins: {{ .Values.security.cors.allowedOrigins | default "*" }}
+        allowed-methods: {{ .Values.security.cors.allowedMethods | default "GET,POST,PUT,DELETE,OPTIONS" }}
+        allowed-headers: {{ .Values.security.cors.allowedHeaders | default "*" }}
+        max-age: {{ .Values.security.cors.maxAge | default 3600 }}
+        allow-credentials: true
+      
+      jwt:
+        issuer: {{ .Values.security.jwt.issuer }}
+        audience: {{ .Values.security.jwt.audience }}
+        expiration: {{ .Values.security.jwt.expiration | default "86400" }}
+        secret-key: ${JWT_SECRET_KEY}  # Loaded from secrets
+        
+    # Monitoring and Management Configuration
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,metrics,prometheus,info
+          base-path: /actuator
+      
+      metrics:
+        tags:
+          application: linkedin-data-service
+          environment: {{ .Values.environment | default "production" }}
+        export:
+          prometheus:
+            enabled: true
+            step: 30s
+            descriptions: true
+      
+      health:
+        probes:
+          enabled: true
+        livenessState:
+          enabled: true
+        readinessState:
+          enabled: true
+        db:
+          enabled: true
+        mongo:
+          enabled: true
+        redis:
+          enabled: true
+          
+    # Logging Configuration
+    logging:
+      level:
+        root: {{ .Values.logging.level.root | default "INFO" }}
+        com.linkedin.search: {{ .Values.logging.level.app | default "INFO" }}
+        org.springframework: {{ .Values.logging.level.spring | default "WARN" }}
+        org.mongodb: {{ .Values.logging.level.mongodb | default "WARN" }}
+        org.hibernate: {{ .Values.logging.level.hibernate | default "WARN" }}
+      pattern:
+        console: "%d{ISO8601} [%X{traceId}/%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+        file: "%d{ISO8601} [%X{traceId}/%X{spanId}] [%thread] %-5level %logger{36} - %msg%n"
+      file:
+        name: /var/log/data-service/application.log
+        max-size: 100MB
+        max-history: 10
