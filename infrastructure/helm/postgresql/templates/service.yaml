@@ -1,0 +1,126 @@
+# Service template for PostgreSQL database instances
+# Version: 1.0.0
+# Dependencies: bitnami/postgresql@12.5.8
+
+{{- $fullName := include "postgresql.fullname" . -}}
+
+---
+# Headless service for StatefulSet DNS-based discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-headless
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+    service.kubernetes.io/topology-aware-hints: "auto"
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    prometheus.io/scrape: "{{ .Values.metrics.enabled }}"
+    prometheus.io/port: "9187"
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - name: tcp-postgresql
+      port: {{ .Values.service.port }}
+      targetPort: tcp-postgresql
+      protocol: TCP
+    {{- if .Values.metrics.enabled }}
+    - name: tcp-metrics
+      port: 9187
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
+  selector:
+    {{- include "common.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+
+---
+# Primary service for write operations
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-primary
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+    postgresql.service/type: primary
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  ports:
+    - name: tcp-postgresql
+      port: {{ .Values.service.port }}
+      targetPort: tcp-postgresql
+      protocol: TCP
+  selector:
+    {{- include "common.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+    role: primary
+
+---
+# Read replicas service for read operations load balancing
+{{- if eq .Values.architecture.type "replication" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-read
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+    postgresql.service/type: readonly
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.kubernetes.io/topology-aware-hints: "auto"
+spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  ports:
+    - name: tcp-postgresql
+      port: {{ .Values.service.port }}
+      targetPort: tcp-postgresql
+      protocol: TCP
+  selector:
+    {{- include "common.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+    role: replica
+{{- end }}
+
+---
+# Metrics service for Prometheus monitoring
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-metrics
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9187"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+    - name: tcp-metrics
+      port: 9187
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "common.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+{{- end }}
