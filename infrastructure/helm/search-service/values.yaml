@@ -1,0 +1,125 @@
+# helm v3.12+ values configuration for LinkedIn Profile Search Service
+# Kubernetes v1.27+ deployment configuration
+
+# Override the release name
+nameOverride: ""
+fullnameOverride: ""
+
+# Number of pod replicas (default is 2 for high availability)
+replicaCount: 2
+
+# Container image configuration
+image:
+  repository: search-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Image pull secrets for private registry access
+imagePullSecrets: []
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations including Prometheus metrics scraping
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+# Pod security context
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsNonRoot: true
+
+# Container security context with restricted capabilities
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+
+# Resource limits and requests as specified in technical requirements
+resources:
+  limits:
+    cpu: "2"
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Horizontal Pod Autoscaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Node selector for pod scheduling
+nodeSelector: {}
+
+# Pod tolerations
+tolerations: []
+
+# Pod affinity rules for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - search-service
+        topologyKey: kubernetes.io/hostname
+
+# Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+# Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Environment variables for the search service
+env:
+  # LinkedIn API configuration
+  LINKEDIN_API_VERSION: "v2"
+  LINKEDIN_API_BASE_URL: "https://api.linkedin.com"
+  LINKEDIN_API_RATE_LIMIT_CALLS: "100"
+  LINKEDIN_API_RATE_LIMIT_PERIOD: "60"
+  LINKEDIN_API_TIMEOUT: "30"
+  LINKEDIN_API_RETRY_MAX_ATTEMPTS: "3"
+  LINKEDIN_API_RETRY_INITIAL_DELAY: "1"
+  LINKEDIN_API_RETRY_MAX_DELAY: "10"
+  
+  # Application configuration
+  LOG_LEVEL: "INFO"
+  PORT: "8000"
+  PYTHONPATH: "/app"
+  PYTHONUNBUFFERED: "1"
