@@ -1,0 +1,50 @@
+apiVersion: v2
+name: monitoring
+description: Enterprise-grade monitoring stack integrating Prometheus, Grafana, and AlertManager for comprehensive system observability, metrics collection, visualization, and alert management
+type: application
+version: 1.0.0
+appVersion: 2.45.0
+
+keywords:
+  - monitoring
+  - prometheus
+  - grafana
+  - alertmanager
+  - metrics
+  - observability
+  - alerts
+  - visualization
+  - dashboards
+  - system-monitoring
+  - infrastructure-monitoring
+  - kubernetes-monitoring
+
+maintainers:
+  - name: DevOps Team
+    email: devops@company.com
+    url: https://github.com/company/monitoring
+
+dependencies:
+  - name: prometheus
+    version: 2.45.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: prometheus.enabled
+    tags:
+      - metrics
+      - monitoring
+
+  - name: grafana
+    version: 9.5.0
+    repository: https://grafana.github.io/helm-charts
+    condition: grafana.enabled
+    tags:
+      - visualization
+      - dashboards
+
+  - name: alertmanager
+    version: 0.25.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: alertmanager.enabled
+    tags:
+      - alerts
+      - notifications
