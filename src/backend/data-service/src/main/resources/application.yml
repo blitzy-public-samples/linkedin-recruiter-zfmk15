@@ -1,0 +1,143 @@
+# Application Configuration for LinkedIn Profile Search Data Service
+# Spring Boot Version: 3.1+
+# PostgreSQL Driver Version: 42.6.0
+# MongoDB Driver Version: 4.9.0
+# Redis Client Version: 6.2.4
+
+spring:
+  application:
+    name: data-service
+
+  # PostgreSQL Database Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/linkedin_search
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      connection-timeout: 30000
+      pool-name: DataServiceHikariCP
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate.ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: mongodb://${MONGODB_HOST:localhost}:27017/linkedin_search
+      authentication-database: admin
+      username: ${MONGODB_USER}
+      password: ${MONGODB_PASSWORD}
+      database: linkedin_search
+      auto-index-creation: true
+      connection-pool-size: 20
+      max-connection-idle-time: 60000
+      max-connection-life-time: 120000
+
+    # Redis Configuration
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD}
+      timeout: 2000
+      database: 0
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: 1000
+
+  # Security Configuration
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      expiration: 86400000  # 24 hours in milliseconds
+      issuer: data-service
+      header: Authorization
+      prefix: Bearer 
+    cors:
+      allowed-origins: ${CORS_ORIGINS:*}
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+      allowed-headers: '*'
+      max-age: 3600
+      allow-credentials: true
+
+  # Database Migration Configuration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true
+    out-of-order: false
+
+# Server Configuration
+server:
+  port: 8082
+
+# Management & Monitoring Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info,loggers
+      base-path: /actuator
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+        step: 1m
+    tags:
+      application: data-service
+      environment: ${SPRING_PROFILES_ACTIVE:dev}
+    distribution:
+      percentiles-histogram: true
+      sla: 100ms,500ms
+  health:
+    probes:
+      enabled: true
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+    db:
+      enabled: true
+    redis:
+      enabled: true
+    mongo:
+      enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.linkedin.search: INFO
+    org.hibernate:
+      SQL: INFO
+      type.descriptor.sql.BasicBinder: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/data-service.log
+    max-size: 10MB
+    max-history: 7
+    total-size-cap: 1GB
