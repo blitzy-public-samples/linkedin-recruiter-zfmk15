@@ -1,0 +1,90 @@
+{{/* 
+API Gateway ConfigMap Template
+Version: 1.0.0
+Purpose: Provides environment-specific configuration for the API Gateway service
+including authentication, CORS, rate limiting, and operational settings
+*/}}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "api-gateway.fullname" . }}-config
+  labels:
+    {{- include "api-gateway.labels" . | nindent 4 }}
+    app.kubernetes.io/component: config
+    app.kubernetes.io/part-of: api-gateway
+data:
+  # Environment & Service Configuration
+  # ----------------------------------
+  NODE_ENV: {{ .Values.global.environment | default "production" | quote }}
+  PORT: {{ .Values.service.targetPort | default 3000 | quote }}
+  LOG_LEVEL: {{ .Values.env.LOG_LEVEL | default "info" | quote }}
+  
+  # Authentication Configuration (Auth0 + JWT)
+  # ----------------------------------------
+  AUTH_ENABLED: {{ .Values.apiGateway.auth.enabled | default true | quote }}
+  AUTH_STRATEGY: {{ .Values.apiGateway.auth.strategy | default "jwt" | quote }}
+  
+  # JWT Configuration
+  JWT_SECRET: {{ required "JWT secret is required" .Values.apiGateway.auth.jwt.secret | quote }}
+  JWT_EXPIRES_IN: {{ .Values.apiGateway.auth.jwt.expiresIn | default "1h" | quote }}
+  JWT_REFRESH_EXPIRES_IN: {{ .Values.apiGateway.auth.jwt.refreshExpiresIn | default "7d" | quote }}
+  JWT_ALGORITHM: {{ .Values.apiGateway.auth.jwt.algorithm | default "HS256" | quote }}
+  
+  # Auth0 Configuration
+  AUTH0_ENABLED: {{ .Values.apiGateway.auth.auth0.enabled | default true | quote }}
+  AUTH0_DOMAIN: {{ required "Auth0 domain is required" .Values.apiGateway.auth.auth0.domain | quote }}
+  AUTH0_CLIENT_ID: {{ required "Auth0 client ID is required" .Values.apiGateway.auth.auth0.clientId | quote }}
+  AUTH0_AUDIENCE: {{ .Values.apiGateway.auth.auth0.audience | default "https://api.linkedin-search.com" | quote }}
+  AUTH0_ISSUER_URL: {{ printf "https://%s/" .Values.apiGateway.auth.auth0.domain | quote }}
+  
+  # CORS Configuration
+  # -----------------
+  CORS_ENABLED: {{ .Values.apiGateway.cors.enabled | default true | quote }}
+  CORS_ALLOWED_ORIGINS: {{ join "," .Values.apiGateway.cors.allowedOrigins | default "*" | quote }}
+  CORS_ALLOWED_METHODS: {{ join "," .Values.apiGateway.cors.allowedMethods | default "GET,POST,PUT,DELETE,OPTIONS" | quote }}
+  CORS_ALLOWED_HEADERS: {{ join "," .Values.apiGateway.cors.allowedHeaders | default "Content-Type,Authorization,X-Requested-With" | quote }}
+  CORS_EXPOSED_HEADERS: {{ join "," .Values.apiGateway.cors.exposedHeaders | default "Content-Range,X-Total-Count" | quote }}
+  CORS_MAX_AGE: {{ .Values.apiGateway.cors.maxAge | default 3600 | quote }}
+  CORS_CREDENTIALS: {{ .Values.apiGateway.cors.credentials | default true | quote }}
+  
+  # Rate Limiting Configuration
+  # -------------------------
+  RATE_LIMIT_ENABLED: {{ .Values.apiGateway.rateLimit.enabled | default true | quote }}
+  RATE_LIMIT_STORE: {{ .Values.apiGateway.rateLimit.store | default "redis" | quote }}
+  
+  # Default rate limits (requests per minute)
+  DEFAULT_RATE_LIMIT: {{ .Values.apiGateway.rateLimit.default | default "100" | quote }}
+  
+  # Endpoint-specific rate limits
+  SEARCH_RATE_LIMIT: {{ .Values.apiGateway.rateLimit.endpoints.search | default "100" | quote }}
+  PROFILE_RATE_LIMIT: {{ .Values.apiGateway.rateLimit.endpoints.profile | default "1000" | quote }}
+  ANALYSIS_RATE_LIMIT: {{ .Values.apiGateway.rateLimit.endpoints.analysis | default "500" | quote }}
+  EXPORT_RATE_LIMIT: {{ .Values.apiGateway.rateLimit.endpoints.export | default "50" | quote }}
+  
+  # Rate limit window settings
+  RATE_LIMIT_WINDOW_MS: {{ .Values.apiGateway.rateLimit.windowMs | default 60000 | quote }}
+  RATE_LIMIT_SKIP_FAILED_REQUESTS: {{ .Values.apiGateway.rateLimit.skipFailedRequests | default true | quote }}
+  
+  # Redis Configuration for Rate Limiting
+  # ----------------------------------
+  REDIS_ENABLED: {{ .Values.redis.enabled | default true | quote }}
+  REDIS_URL: {{ printf "redis://%s-redis-master:6379" (include "api-gateway.fullname" .) | quote }}
+  REDIS_PREFIX: {{ .Values.apiGateway.redis.prefix | default "rl:" | quote }}
+  
+  # Monitoring & Observability
+  # ------------------------
+  ENABLE_METRICS: {{ .Values.monitoring.enabled | default true | quote }}
+  METRICS_PATH: {{ .Values.monitoring.metricsPath | default "/metrics" | quote }}
+  
+  # Service Dependencies
+  # ------------------
+  SEARCH_SERVICE_URL: {{ .Values.apiGateway.services.search.url | default "http://search-service:8080" | quote }}
+  ANALYSIS_SERVICE_URL: {{ .Values.apiGateway.services.analysis.url | default "http://analysis-service:8080" | quote }}
+  DATA_SERVICE_URL: {{ .Values.apiGateway.services.data.url | default "http://data-service:8080" | quote }}
+  
+  # Circuit Breaker Configuration
+  # ---------------------------
+  CIRCUIT_BREAKER_ENABLED: {{ .Values.apiGateway.circuitBreaker.enabled | default true | quote }}
+  CIRCUIT_BREAKER_TIMEOUT: {{ .Values.apiGateway.circuitBreaker.timeout | default 5000 | quote }}
+  CIRCUIT_BREAKER_RESET_TIMEOUT: {{ .Values.apiGateway.circuitBreaker.resetTimeout | default 30000 | quote }}
