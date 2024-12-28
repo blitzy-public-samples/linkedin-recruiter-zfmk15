@@ -1,0 +1,112 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+.github
+
+# Security and environment files
+.env
+.env.*
+!.env.example
+**/*.pem
+**/*.key
+**/*.cert
+**/*.crt
+
+# Node.js development artifacts
+**/node_modules
+**/.npm
+**/npm-debug.log
+**/yarn-debug.log
+**/yarn-error.log
+
+# Python development artifacts
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.Python
+**/pip-log.txt
+**/.tox
+**/.coverage
+**/.coverage.*
+**/.pytest_cache
+**/.mypy_cache
+**/htmlcov
+**/.ruff_cache
+
+# Java/Maven artifacts
+**/target
+**/.mvn
+**/.gradle
+**/build
+**/.classpath
+**/.project
+**/.settings
+**/*.class
+**/*.jar
+**/gradle-wrapper.jar
+
+# IDE and editor files
+**/.idea
+**/.vscode
+**/*.swp
+**/*.swo
+**/*.swn
+**/*.bak
+**/*~
+
+# Documentation and markdown
+**/*.md
+**/docs
+**/README*
+**/CHANGELOG*
+**/LICENSE*
+
+# Test files and directories
+**/tests
+**/test
+**/__tests__
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+**/*.test.py
+**/*Test.java
+**/junit
+
+# Docker and container files
+**/Dockerfile
+**/.dockerignore
+**/docker-compose*.yml
+**/docker
+
+# Kubernetes and deployment
+**/kubernetes
+**/*.yaml
+**/*.yml
+!**/application.yml
+!**/application-prod.yml
+
+# Build and configuration
+**/tsconfig.json
+**/tslint.json
+**/.eslintrc*
+**/.prettier*
+**/webpack*.js
+**/babel*.js
+**/rollup*.js
+**/jest*.js
+**/poetry.lock
+**/pyproject.toml
+**/setup.py
+**/pom.xml
+!**/pom-prod.xml
+
+# Temporary and log files
+**/tmp
+**/temp
+**/*.log
+**/logs
+**/.DS_Store
+**/Thumbs.db
