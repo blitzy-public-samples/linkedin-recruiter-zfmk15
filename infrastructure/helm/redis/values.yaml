@@ -1,0 +1,104 @@
+# Redis Helm Chart Values
+# Version: redis:7.0-alpine
+
+# Override release name
+nameOverride: ""
+fullnameOverride: ""
+
+# Redis container image configuration
+image:
+  repository: redis
+  tag: 7.0-alpine
+  pullPolicy: IfNotPresent
+
+# High availability configuration with 3 replicas
+replicaCount: 3
+
+# Service configuration for Redis cluster
+service:
+  type: ClusterIP
+  port: 6379
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+
+# Persistent storage configuration
+persistence:
+  enabled: true
+  storageClass: "standard"
+  size: "10Gi"
+  accessMode: ReadWriteOnce
+  annotations:
+    backup.velero.io/backup-volumes: "data"
+
+# Resource requests and limits
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+# Redis server configuration
+config:
+  # Memory management
+  maxmemory: "800mb"
+  maxmemoryPolicy: "allkeys-lru"
+  
+  # Persistence configuration
+  appendonly: "yes"
+  appendfsync: "everysec"
+  saveRdbSeconds: 300
+  saveRdbChanges: 10
+  
+  # Connection settings
+  tcpKeepalive: 300
+  timeout: 0
+  
+  # RDB settings
+  rdbcompression: "yes"
+  rdbchecksum: "yes"
+  stopWritesOnBgsaveError: "yes"
+
+# Health check probes
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+  exec:
+    command:
+      - redis-cli
+      - ping
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+  exec:
+    command:
+      - redis-cli
+      - ping
+
+# Security context
+podSecurityContext:
+  fsGroup: 1001
+
+containerSecurityContext:
+  runAsUser: 1001
+  runAsNonRoot: true
+
+# Update strategy
+updateStrategy:
+  type: RollingUpdate
+
+# Pod anti-affinity for high availability
+podAntiAffinity:
+  preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        topologyKey: kubernetes.io/hostname
