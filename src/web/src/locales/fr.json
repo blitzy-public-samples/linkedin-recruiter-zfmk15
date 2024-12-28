@@ -1,0 +1,162 @@
+{
+  "common": {
+    "buttons": {
+      "search": "Rechercher",
+      "clear": "Effacer",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "export": "Exporter",
+      "view": "Voir les détails",
+      "back": "Retour",
+      "next": "Suivant",
+      "previous": "Précédent",
+      "confirm": "Confirmer",
+      "apply": "Appliquer",
+      "close": "Fermer"
+    },
+    "labels": {
+      "loading": "Chargement...",
+      "error": "Erreur",
+      "success": "Succès",
+      "warning": "Avertissement",
+      "required": "Obligatoire",
+      "optional": "Facultatif",
+      "selected": "Sélectionné",
+      "all": "Tous",
+      "none": "Aucun",
+      "status": "Statut",
+      "date": "Date",
+      "time": "Heure"
+    },
+    "navigation": {
+      "dashboard": "Tableau de bord",
+      "search": "Recherche",
+      "profiles": "Profils",
+      "analytics": "Analyses",
+      "settings": "Paramètres",
+      "help": "Aide",
+      "account": "Mon compte",
+      "logout": "Déconnexion"
+    },
+    "errors": {
+      "required": "Ce champ est obligatoire",
+      "invalid": "Entrée invalide",
+      "serverError": "Une erreur serveur est survenue",
+      "networkError": "Une erreur réseau est survenue",
+      "unauthorized": "Accès non autorisé",
+      "notFound": "Ressource non trouvée",
+      "validation": "Erreur de validation",
+      "timeout": "Délai d'attente dépassé"
+    },
+    "dateTime": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "tomorrow": "Demain",
+      "days": "jours",
+      "weeks": "semaines",
+      "months": "mois",
+      "years": "années"
+    }
+  },
+  "search": {
+    "form": {
+      "keywords": "Mots-clés",
+      "keywordsPlaceholder": "Entrez les mots-clés de recherche...",
+      "location": "Localisation",
+      "locationPlaceholder": "Entrez la localisation...",
+      "experience": "Expérience",
+      "experienceYears": "Années d'expérience",
+      "skills": "Compétences",
+      "skillsPlaceholder": "Ajouter des compétences...",
+      "requiredSkills": "Compétences requises",
+      "optionalSkills": "Compétences souhaitées",
+      "addSkill": "Ajouter une compétence",
+      "removeSkill": "Supprimer la compétence",
+      "searchHistory": "Historique des recherches",
+      "savedSearches": "Recherches enregistrées",
+      "advancedSearch": "Recherche avancée"
+    },
+    "results": {
+      "found": "{{count}} profils trouvés",
+      "noResults": "Aucun profil trouvé",
+      "sortBy": "Trier par",
+      "relevance": "Pertinence",
+      "recentlyUpdated": "Récemment mis à jour",
+      "matchScore": "Score de correspondance",
+      "experienceLevel": "Niveau d'expérience",
+      "locationMatch": "Correspondance géographique"
+    },
+    "filters": {
+      "title": "Filtres",
+      "clear": "Effacer les filtres",
+      "apply": "Appliquer les filtres",
+      "experience": {
+        "entry": "Débutant",
+        "intermediate": "Intermédiaire",
+        "senior": "Senior",
+        "expert": "Expert"
+      }
+    }
+  },
+  "profile": {
+    "details": {
+      "experience": "Expérience",
+      "education": "Formation",
+      "skills": "Compétences",
+      "certifications": "Certifications",
+      "present": "Présent",
+      "years": "{{count}} ans",
+      "months": "{{count}} mois",
+      "matchScore": "Score de correspondance",
+      "analysis": "Analyse du profil",
+      "topMatch": "Principaux indicateurs de correspondance",
+      "skillMatch": "Correspondance des compétences",
+      "experienceMatch": "Correspondance de l'expérience",
+      "industryMatch": "Correspondance du secteur",
+      "recommendations": "Recommandations",
+      "languages": "Langues",
+      "projects": "Projets",
+      "publications": "Publications"
+    },
+    "actions": {
+      "contact": "Contacter",
+      "save": "Enregistrer le profil",
+      "share": "Partager le profil",
+      "export": "Exporter le profil",
+      "generateReport": "Générer un rapport",
+      "addNote": "Ajouter une note",
+      "scheduleInterview": "Planifier un entretien",
+      "markAsFavorite": "Marquer comme favori"
+    }
+  },
+  "analytics": {
+    "metrics": {
+      "totalSearches": "Recherches totales",
+      "profilesFound": "Profils trouvés",
+      "averageMatch": "Score moyen de correspondance",
+      "topSearchTerms": "Termes de recherche populaires",
+      "searchEfficiency": "Efficacité de recherche",
+      "conversionRate": "Taux de conversion",
+      "timeToHire": "Délai de recrutement"
+    },
+    "charts": {
+      "searchPerformance": "Performance de recherche",
+      "matchDistribution": "Distribution des scores",
+      "skillsDistribution": "Distribution des compétences",
+      "geographicDistribution": "Distribution géographique",
+      "trendsOverTime": "Tendances temporelles",
+      "comparisonAnalysis": "Analyse comparative"
+    },
+    "filters": {
+      "dateRange": "Période",
+      "lastWeek": "Dernière semaine",
+      "lastMonth": "Dernier mois",
+      "lastQuarter": "Dernier trimestre",
+      "custom": "Période personnalisée",
+      "fromDate": "Date de début",
+      "toDate": "Date de fin"
+    }
+  }
+}
