@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mongodb.fullname" . }}
+  labels:
+    {{- include "mongodb.labels" . | nindent 4 }}
+  annotations:
+    # Enable Prometheus scraping for MongoDB metrics
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9216"
+spec:
+  # Service type from values.yaml, defaults to ClusterIP for internal cluster access
+  type: {{ .Values.service.type }}
+  ports:
+    # Main MongoDB port for database connections and replica set communication
+    - port: {{ .Values.service.port }}
+      targetPort: mongodb
+      protocol: TCP
+      name: mongodb
+    # MongoDB metrics exporter port for Prometheus monitoring
+    - port: 9216
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  # Selector labels to match MongoDB pods from StatefulSet
+  selector:
+    {{- include "mongodb.selectorLabels" . | nindent 4 }}
