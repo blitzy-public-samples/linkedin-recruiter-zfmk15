@@ -1,0 +1,53 @@
+Format: ICO (image/x-icon)
+File Size Target: < 5KB
+Contains 3 image sizes in 32-bit color depth:
+- 16x16 pixels (Browser tab icon)
+- 32x32 pixels (Windows taskbar)
+- 48x48 pixels (Bookmark and desktop icon)
+
+Color Specifications:
+- Primary Color: #1976d2 (Material Design Blue)
+- Background: Transparent
+- Color Depth: 32-bit (RGBA)
+
+The icon should be generated from the vector source at 'src/web/src/assets/images/logo.svg'
+using the following process:
+
+1. Start with the vector logo
+2. Export at required dimensions (16x16, 32x32, 48x48)
+3. Optimize each size for crisp rendering
+4. Combine into single .ico file
+5. Apply compression optimization
+
+The file should be:
+- Cached with "immutable" strategy
+- Set max-age of 1 year
+- Distributed via CDN
+- Integrated with PWA manifest
+- Support "any" and "maskable" purposes
+- Meet WCAG 2.1 AA contrast requirements
+- Render crisply across all modern browsers (Chrome 90+, Firefox 88+, Safari 14+, Edge 90+)
+
+The resulting favicon.ico should be placed at:
+src/web/public/favicon.ico
+```
+
+Note: Since favicon.ico is a binary image file, I've provided the detailed specifications for creating it rather than the actual binary content. The file should be created using an appropriate image editing tool following these specifications. The actual binary data would not be readable or useful in text format.
+
+The favicon should be referenced in:
+1. index.html using:
+```html
+<link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+```
+
+2. manifest.json using:
+```json
+{
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
