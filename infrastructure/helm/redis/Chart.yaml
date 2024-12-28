@@ -1,0 +1,46 @@
+# Helm chart definition for Redis deployment
+# Redis version: 7.0
+# Purpose: Distributed caching, session management, rate limiting and PubSub for LinkedIn Profile Search system
+
+apiVersion: v2
+name: redis
+description: Production-grade Redis deployment for LinkedIn Profile Search system providing distributed caching, session management, rate limiting and PubSub capabilities with master-replica high availability setup
+version: 1.0.0
+type: application
+appVersion: "7.0"
+
+# Keywords for chart discovery and categorization
+keywords:
+  - cache
+  - redis
+  - nosql
+  - database
+  - session-management
+  - rate-limiting
+  - pubsub
+  - high-availability
+
+# Chart maintainers
+maintainers:
+  - name: LinkedIn Profile Search Team
+    email: team@linkedinprofilesearch.com
+
+# Chart metadata
+home: https://linkedinprofilesearch.com
+sources:
+  - https://github.com/linkedinprofilesearch/infrastructure
+
+# Kubernetes version compatibility
+kubeVersion: ">=1.21.0-0"
+
+# Chart icon (optional)
+icon: https://redis.io/images/redis-white.png
+
+# Additional annotations
+annotations:
+  category: Database
+  licenses: Apache-2.0
+  support: https://linkedinprofilesearch.com/support
+
+# Dependencies - none as we're using a standalone Redis setup
+dependencies: []
