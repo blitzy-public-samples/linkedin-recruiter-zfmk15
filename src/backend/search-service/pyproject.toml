@@ -1,0 +1,78 @@
+[tool.poetry]
+name = "linkedin-search-service"
+version = "1.0.0"
+description = "LinkedIn Profile Search Service for automated candidate sourcing"
+authors = ["LinkedIn Search Team <team@example.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+python = "^3.11"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+# Web framework and API - v0.100.0+ as per technical spec
+fastapi = "^0.100.0"
+uvicorn = "^0.23.0"
+pydantic = "^2.0.0"
+
+# HTTP client for LinkedIn API integration
+httpx = "^0.24.0"
+
+# Web scraping and parsing
+beautifulsoup4 = "^4.12.0"
+scrapy = "^2.9.0"
+
+# Caching and data storage
+redis = "^4.6.0"
+
+# Observability and monitoring
+prometheus-client = "^0.17.0"
+structlog = "^23.1.0"
+
+# Security and authentication
+python-jose = "^3.3.0"
+passlib = "^1.7.4"
+
+[tool.poetry.group.dev.dependencies]
+# Testing frameworks
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-cov = "^4.1.0"
+
+# Code quality tools
+black = "^23.7.0"
+isort = "^5.12.0"
+mypy = "^1.4.0"
+flake8 = "^6.0.0"
+
+# Testing utilities
+aioresponses = "^0.7.4"
+
+[build-system]
+requires = ["poetry-core>=1.7.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.build]
+generate-setup-file = false
+script = "build.py"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = "\.pyi?$"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=src"
+testpaths = ["tests"]
