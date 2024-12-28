@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redis.fullname" . }}-config
+  labels: {{ include "redis.labels" . | nindent 4 }}
+  annotations:
+    # Add checksum annotation to trigger pod restart when config changes
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+data:
+  redis.conf: |
+    ################################## MEMORY MANAGEMENT #####################################
+    # Memory limits and eviction policies
+    maxmemory {{ .Values.config.maxmemory }}
+    maxmemory-policy {{ .Values.config.maxmemoryPolicy }}
+    maxmemory-samples 5
+    
+    # Lazy freeing for better performance
+    lazyfree-lazy-eviction yes
+    lazyfree-lazy-expire yes
+    lazyfree-lazy-server-del yes
+    replica-lazy-flush yes
+
+    ################################## PERSISTENCE #########################################
+    # AOF persistence configuration
+    appendonly {{ .Values.config.appendonly }}
+    appendfsync {{ .Values.config.appendfsync }}
+    no-appendfsync-on-rewrite no
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb
+    aof-load-truncated yes
+    aof-use-rdb-preamble yes
+
+    # RDB snapshot configuration
+    save 900 1
+    save 300 10
+    save 60 10000
+    stop-writes-on-bgsave-error yes
+    rdbcompression yes
+    rdbchecksum yes
+
+    ################################## REPLICATION ########################################
+    # Master-Replica configuration
+    replica-serve-stale-data yes
+    replica-read-only yes
+    repl-diskless-sync yes
+    repl-diskless-sync-delay 5
+    repl-disable-tcp-nodelay no
+    replica-priority 100
+
+    ################################## PERFORMANCE ########################################
+    # Network settings
+    tcp-backlog {{ .Values.config.tcpBacklog | default "511" }}
+    timeout 0
+    tcp-keepalive {{ .Values.config.tcpKeepalive | default "300" }}
+    
+    # General performance settings
+    databases 16
+    activerehashing yes
+    lua-time-limit 5000
+    
+    # Slow log configuration
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+    latency-monitor-threshold 0
+
+    ################################## CLIENTS ###########################################
+    # Client connection limits
+    maxclients 10000
+    maxmemory-clients 0
+    
+    # Client output buffer limits
+    client-output-buffer-limit normal 0 0 0
+    client-output-buffer-limit replica 256mb 64mb 60
+    client-output-buffer-limit pubsub 32mb 8mb 60
+
+    ################################## SECURITY #########################################
+    # Basic security settings
+    protected-mode no
+    rename-command FLUSHDB ""
+    rename-command FLUSHALL ""
+    rename-command DEBUG ""
+
+    ################################## ADVANCED #########################################
+    # Advanced features
+    dynamic-hz yes
+    hz 10
+    supervised no
+    syslog-enabled no
+    loglevel notice
