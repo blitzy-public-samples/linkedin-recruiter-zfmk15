@@ -1,0 +1,73 @@
+# ServiceMonitor Custom Resource for Prometheus Operator v0.68.0
+# Configures service discovery and metrics collection for LinkedIn Profile Search microservices
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.service.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    # Standard Kubernetes recommended labels
+    app.kubernetes.io/name: {{ .Values.service.name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/part-of: linkedin-profile-search
+    # Custom label for Prometheus service discovery
+    monitoring.linkedin-profile-search.io/scrape: "true"
+  annotations:
+    # Helm metadata annotations
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
+    # Prometheus scraping configuration annotations
+    prometheus.io/scrape-timeout: {{ .Values.prometheus.serviceMonitor.scrapeTimeout }}
+    prometheus.io/path: /metrics
+
+spec:
+  # Label selector to discover services to monitor
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.service.name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  
+  # Endpoints configuration for metrics collection
+  endpoints:
+    - # Standard metrics endpoint configuration
+      port: metrics
+      interval: {{ .Values.prometheus.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.prometheus.serviceMonitor.scrapeTimeout }}
+      path: /metrics
+      scheme: https
+
+      # TLS configuration for secure metrics collection
+      tlsConfig:
+        insecureSkipVerify: false
+        serverName: {{ .Values.service.name }}.{{ .Release.Namespace }}.svc
+      
+      # Authentication configuration
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      
+      # Metric relabeling configurations from values.yaml
+      relabelings: {{ toYaml .Values.prometheus.serviceMonitor.relabelings | nindent 12 }}
+      metricRelabelings: {{ toYaml .Values.prometheus.serviceMonitor.metricRelabelings | nindent 12 }}
+      
+      # Advanced scraping configurations
+      honorLabels: true
+      honorTimestamps: true
+      enableHttp2: true
+      followRedirects: true
+      proxyUrl: {{ .Values.prometheus.serviceMonitor.proxyUrl }}
+
+  # Namespace selector for service discovery
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+
+  # Additional labels to transfer from targets
+  targetLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+    - app.kubernetes.io/version
+
+  # Limits and metadata configuration
+  sampleLimit: 50000
+  attachMetadata:
+    node: true
