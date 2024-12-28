@@ -1,0 +1,128 @@
+# Redis StatefulSet Template v7.0+
+# Implements a master-replica Redis setup with persistent storage and monitoring
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "redis.fullname" . }}
+  labels:
+    {{- include "redis.labels" . | nindent 4 }}
+  annotations:
+    # Trigger rolling update when config changes
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+spec:
+  # Number of Redis replicas from values.yaml
+  replicas: {{ .Values.replicaCount }}
+  # Headless service for StatefulSet
+  serviceName: {{ include "redis.fullname" . }}
+  # Use RollingUpdate strategy for zero-downtime updates
+  updateStrategy:
+    type: RollingUpdate
+  # Ensure ordered pod creation/deletion
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      {{- include "redis.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "redis.labels" . | nindent 8 }}
+      annotations:
+        # Prometheus metrics annotations
+        prometheus.io/scrape: "{{ .Values.metrics.enabled }}"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+    spec:
+      # Pod security context
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      
+      # Pod anti-affinity for high availability
+      affinity:
+        podAntiAffinity:
+          {{- toYaml .Values.podAntiAffinity | nindent 12 }}
+      
+      # Ensure even pod distribution across nodes
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              {{- include "redis.selectorLabels" . | nindent 14 }}
+      
+      # Init container to verify Redis installation and config
+      initContainers:
+        - name: init-redis
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command:
+            - sh
+            - -c
+            - redis-cli --version && test -f /etc/redis/redis.conf
+      
+      # Main containers
+      containers:
+        # Redis server container
+        - name: redis
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          command:
+            - redis-server
+            - /etc/redis/redis.conf
+          ports:
+            - containerPort: 6379
+              name: redis
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: redis-config
+              mountPath: /etc/redis
+          # Liveness probe to check Redis health
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          # Readiness probe to check Redis availability
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+
+        # Redis metrics exporter container
+        - name: redis-exporter
+          image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.metrics.port }}
+              name: metrics
+          resources:
+            {{- toYaml .Values.metrics.resources | nindent 12 }}
+
+      # Volumes
+      volumes:
+        # Mount Redis configuration from ConfigMap
+        - name: redis-config
+          configMap:
+            name: {{ include "redis.fullname" . }}-config
+
+  # Persistent volume claims for Redis data
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
