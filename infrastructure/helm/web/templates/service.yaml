@@ -1,0 +1,74 @@
+# Service template for web frontend application
+# Version: v1
+# Supports: Kubernetes 1.27+, Helm 3.12+
+# Purpose: Defines the Kubernetes service for exposing the React web frontend with 
+# enhanced support for service mesh, cross-AZ load balancing, and monitoring
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "web.fullname" . }}
+  labels:
+    {{- include "web.labels" . | nindent 4 }}
+  annotations:
+    # Prometheus monitoring configuration
+    prometheus.io/scrape: "{{ .Values.monitoring.enabled | default "true" }}"
+    prometheus.io/port: "{{ .Values.monitoring.port | default "9090" }}"
+    prometheus.io/path: "/metrics"
+    
+    # Istio service mesh integration
+    sidecar.istio.io/inject: "{{ .Values.istio.enabled | default "true" }}"
+    
+    # AWS load balancer configuration for cross-AZ routing
+    service.beta.kubernetes.io/aws-load-balancer-type: "{{ .Values.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type }}"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "{{ .Values.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-cross-zone-load-balancing-enabled }}"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "{{ .Values.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-connection-draining-enabled }}"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout: "{{ .Values.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-connection-draining-timeout }}"
+    
+    # Topology spread configuration
+    topology.kubernetes.io/zone: "{{ .Values.service.zone | default "" }}"
+
+spec:
+  # Service type based on environment configuration
+  type: {{ .Values.service.type }}
+  
+  # Port configuration for HTTP and metrics
+  ports:
+    # Main HTTP port for application traffic
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    
+    # Metrics port for Prometheus scraping
+    - port: {{ .Values.monitoring.port | default 9090 }}
+      targetPort: {{ .Values.monitoring.targetPort | default 9090 }}
+      protocol: TCP
+      name: metrics
+  
+  # Selector for pod targeting
+  selector:
+    {{- include "web.selectorLabels" . | nindent 4 }}
+  
+  # Session affinity configuration for sticky sessions if needed
+  sessionAffinity: {{ .Values.service.sessionAffinity | default "None" }}
+  {{- if eq (.Values.service.sessionAffinity | default "None") "ClientIP" }}
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: {{ .Values.service.sessionAffinityTimeout | default 10800 }}
+  {{- end }}
+  
+  # Topology aware routing configuration
+  topologyKeys:
+    - "kubernetes.io/hostname"
+    - "topology.kubernetes.io/zone"
+    - "topology.kubernetes.io/region"
+    - "*"
+  
+  # External traffic policy for preserving client source IPs
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | default "Cluster" }}
+  
+  # Health check configuration
+  {{- if eq .Values.service.type "LoadBalancer" }}
+  healthCheckNodePort: {{ .Values.service.healthCheckNodePort | default 0 }}
+  {{- end }}
