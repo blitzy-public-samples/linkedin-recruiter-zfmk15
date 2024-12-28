@@ -1,0 +1,81 @@
+{{/* 
+Gateway Helm template for LinkedIn Profile Search and Analysis System
+Version: 1.20+
+Purpose: Manages ingress traffic with enhanced security and monitoring
+*/}}
+
+{{/* Generate full gateway name */}}
+{{- define "gateway.fullname" -}}
+{{- printf "%s-%s" .Release.Name .Values.gateways.name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/* Generate consistent labels */}}
+{{- define "gateway.labels" -}}
+app: {{ .Values.gateways.labels.app }}
+component: {{ .Values.gateways.labels.component }}
+version: {{ .Values.gateways.labels.version }}
+helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end -}}
+
+# Istio Gateway resource definition
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ template "gateway.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "gateway.labels" . | nindent 4 }}
+  annotations:
+    # Enable Prometheus metrics scraping
+    monitoring.istio.io/scrape: "true"
+    monitoring.istio.io/port: "15020"
+    monitoring.istio.io/path: "/stats/prometheus"
+    
+    # Security configurations
+    security.istio.io/tlsMode: "STRICT"
+    security.istio.io/mtlsMode: "STRICT"
+    cert-manager.io/cluster-issuer: "{{ .Values.tls.credentialName }}"
+    
+    # Resource policies
+    networking.istio.io/max-connections: "10000"
+    networking.istio.io/max-requests-per-connection: "10000"
+
+spec:
+  selector:
+    istio: ingressgateway
+    # Network topology selection for multi-cluster scenarios
+    topology.istio.io/network: {{ .Values.gateways.network | default "default-network" }}
+  
+  servers:
+    # HTTP server configuration (with HTTPS redirect)
+    - port:
+        number: {{ index .Values.gateways.ports 0 "port" }}
+        name: {{ index .Values.gateways.ports 0 "name" }}
+        protocol: {{ index .Values.gateways.ports 0 "protocol" }}
+      hosts:
+        {{- range .Values.virtualServices.hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      tls:
+        httpsRedirect: true
+
+    # HTTPS server configuration with TLS
+    - port:
+        number: {{ index .Values.gateways.ports 1 "port" }}
+        name: {{ index .Values.gateways.ports 1 "name" }}
+        protocol: {{ index .Values.gateways.ports 1 "protocol" }}
+      hosts:
+        {{- range .Values.virtualServices.hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      tls:
+        mode: {{ .Values.gateways.tls.mode }}
+        credentialName: {{ .Values.gateways.tls.credentialName }}
+        minProtocolVersion: {{ .Values.gateways.tls.minProtocolVersion }}
+        cipherSuites:
+        {{- range .Values.gateways.tls.cipherSuites }}
+        - {{ . }}
+        {{- end }}
