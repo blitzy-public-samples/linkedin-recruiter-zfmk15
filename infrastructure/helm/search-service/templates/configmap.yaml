@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-search-service-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    component: search-service
+    version: {{ .Chart.Version }}
+data:
+  # LinkedIn API Configuration
+  LINKEDIN_API_CONFIG: |
+    {
+      "api_version": "v2",
+      "base_url": {{ .Values.search_service.config.linkedin.baseUrl | default "https://api.linkedin.com" | quote }},
+      "rate_limit": {
+        "default": {
+          "calls": {{ .Values.search_service.config.linkedin.rateLimits.default.calls | default 100 }},
+          "period": {{ .Values.search_service.config.linkedin.rateLimits.default.period | default 60 }},
+          "burst_limit": {{ .Values.search_service.config.linkedin.rateLimits.default.burstLimit | default 150 }}
+        },
+        "endpoints": {
+          "search": {
+            "calls": {{ .Values.search_service.config.linkedin.rateLimits.search.calls | default 50 }},
+            "period": {{ .Values.search_service.config.linkedin.rateLimits.search.period | default 60 }}
+          },
+          "profile": {
+            "calls": {{ .Values.search_service.config.linkedin.rateLimits.profile.calls | default 100 }},
+            "period": {{ .Values.search_service.config.linkedin.rateLimits.profile.period | default 60 }}
+          }
+        },
+        "strategy": {{ .Values.search_service.config.linkedin.rateLimits.strategy | default "token_bucket" | quote }}
+      },
+      "timeout": {
+        "connect": {{ .Values.search_service.config.linkedin.timeout.connect | default 5 }},
+        "read": {{ .Values.search_service.config.linkedin.timeout.read | default 30 }},
+        "total": {{ .Values.search_service.config.linkedin.timeout.total | default 35 }}
+      },
+      "retry": {
+        "max_attempts": {{ .Values.search_service.config.linkedin.retry.maxAttempts | default 3 }},
+        "initial_delay": {{ .Values.search_service.config.linkedin.retry.initialDelay | default 1 }},
+        "max_delay": {{ .Values.search_service.config.linkedin.retry.maxDelay | default 10 }},
+        "backoff_factor": {{ .Values.search_service.config.linkedin.retry.backoffFactor | default 2 }},
+        "retry_on_status_codes": [429, 500, 502, 503, 504]
+      },
+      "security": {
+        "key_rotation_days": {{ .Values.search_service.security.keyRotationDays | default 90 }},
+        "request_signing": {{ .Values.search_service.security.requestSigning | default true }},
+        "proxy": {
+          "enabled": {{ .Values.search_service.security.proxy.enabled | default false }},
+          "url": {{ .Values.search_service.security.proxy.url | default "" | quote }},
+          "auth": {{ .Values.search_service.security.proxy.auth | default "null" }}
+        }
+      }
+    }
+
+  # Logging Configuration
+  LOGGING_CONFIG: |
+    {
+      "version": 1,
+      "disable_existing_loggers": false,
+      "formatters": {
+        "json": {
+          "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+          "format": "%(asctime)s %(levelname)s %(name)s %(correlation_id)s %(message)s %(pathname)s %(lineno)d %(process)d %(thread)d %(exc_info)s",
+          "datefmt": "%Y-%m-%d %H:%M:%S",
+          "json_ensure_ascii": false
+        }
+      },
+      "filters": {
+        "correlation_id": {
+          "()": "app.middleware.CorrelationIdFilter"
+        }
+      },
+      "handlers": {
+        "console": {
+          "class": "logging.StreamHandler",
+          "formatter": "json",
+          "filters": ["correlation_id"],
+          "stream": "ext://sys.stdout"
+        }
+      },
+      "root": {
+        "level": {{ .Values.search_service.config.logging.level | default "INFO" | quote }},
+        "handlers": ["console"],
+        "propagate": true
+      }
+    }
+
+  # Monitoring Configuration
+  MONITORING_CONFIG: |
+    {
+      "metrics_enabled": {{ .Values.search_service.monitoring.metricsEnabled | default true }},
+      "health_check_interval": {{ .Values.search_service.monitoring.healthCheckInterval | default 60 }},
+      "alert_thresholds": {
+        "rate_limit_usage": {{ .Values.search_service.monitoring.alertThresholds.rateLimitUsage | default 0.8 }},
+        "error_rate": {{ .Values.search_service.monitoring.alertThresholds.errorRate | default 0.05 }}
+      },
+      "elk_stack": {
+        "enabled": {{ .Values.search_service.monitoring.elkStack.enabled | default true }},
+        "host": {{ .Values.search_service.monitoring.elkStack.host | default "elasticsearch-master.logging" | quote }},
+        "port": {{ .Values.search_service.monitoring.elkStack.port | default 9200 }},
+        "index_prefix": {{ .Values.search_service.monitoring.elkStack.indexPrefix | default "search-service" | quote }}
+      }
+    }
+
+  # Service Configuration
+  SERVICE_CONFIG: |
+    {
+      "environment": {{ .Values.search_service.config.environment | default "production" | quote }},
+      "service_name": "search-service",
+      "version": {{ .Chart.Version | quote }},
+      "max_workers": {{ .Values.search_service.config.maxWorkers | default 4 }},
+      "request_timeout": {{ .Values.search_service.config.requestTimeout | default 30 }},
+      "max_connections": {{ .Values.search_service.config.maxConnections | default 100 }},
+      "buffer_size": {{ .Values.search_service.config.bufferSize | default 1000 }},
+      "cache": {
+        "enabled": {{ .Values.search_service.config.cache.enabled | default true }},
+        "ttl": {{ .Values.search_service.config.cache.ttl | default 3600 }}
+      }
+    }
