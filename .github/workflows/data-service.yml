@@ -1,0 +1,181 @@
+# Data Service CI/CD Pipeline
+# Version: 1.0.0
+# Handles build, test, security scan and deployment of the data service component
+
+name: Data Service CI/CD
+
+# Trigger workflow on push and pull requests to main branch
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/backend/data-service/**'
+      - '.github/workflows/data-service.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/backend/data-service/**'
+      - '.github/workflows/data-service.yml'
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_VERSION: '3.9.3'
+  ECR_REPOSITORY: 'data-service'
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+      
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      
+      - name: Build with Maven
+        run: |
+          cd src/backend/data-service
+          mvn -B clean package -DskipTests
+          
+      - name: Run unit tests
+        run: |
+          cd src/backend/data-service
+          mvn -B test
+      
+      - name: Run integration tests
+        run: |
+          cd src/backend/data-service
+          mvn -B verify -Pfailsafe
+          
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: src/backend/data-service/target/surefire-reports
+
+  security-scan:
+    name: Security Scan
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Run Snyk security scan
+        uses: snyk/actions/maven@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+          
+      - name: Run OWASP dependency check
+        run: |
+          cd src/backend/data-service
+          mvn org.owasp:dependency-check-maven:check
+          
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: src/backend/data-service/target/dependency-check-report.html
+
+  build-and-push:
+    name: Build and Push Container
+    needs: security-scan
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./src/backend/data-service
+          file: ./src/backend/data-service/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            JAVA_VERSION=${{ env.JAVA_VERSION }}
+            MAVEN_VERSION=${{ env.MAVEN_VERSION }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            
+      - name: Scan container image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+  deploy:
+    name: Deploy to EKS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name linkedin-search-cluster --region ${{ env.AWS_REGION }}
+          
+      - name: Deploy to EKS
+        run: |
+          kubectl set image deployment/data-service \
+            data-service=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+            -n linkedin-search
+            
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/data-service -n linkedin-search --timeout=300s
+          
+      - name: Run health check
+        run: |
+          kubectl exec -n linkedin-search deployment/data-service -- wget --spider http://localhost:8082/actuator/health
