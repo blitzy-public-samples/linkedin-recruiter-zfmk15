@@ -28,7 +28,7 @@
     "winston": "3.10.0",
     "express-rate-limit": "7.0.0",
     "express-validator": "7.0.1",
-    "dotenv": "16.3.1",
+    "dotenv": "16.4.7",
     "dd-trace": "4.0.0",
     "prom-client": "14.2.0"
   },
